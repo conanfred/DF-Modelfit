@@ -1,7 +1,7 @@
 # Outil personnel de recommandation de modèles LLM
 <p align="center">
-  <a href="https://github.com/YOUR_GITHUB_USERNAME/DF-Modelfit/actions/workflows/python-package.yml"><img src="https://github.com/YOUR_GITHUB_USERNAME/DF-Modelfit/actions/workflows/python-package.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <img src="https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=github-actions&logoColor=white" alt="CI">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-Usage%20gratuit%20(particuliers)-green" alt="Licence"></a>
   <img src="https://img.shields.io/badge/python-3.9+-3776AB?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/Maintained%3F-oui-green" alt="Maintained">
