@@ -1,0 +1,53 @@
+# Environnement virtuel Python
+.venv/
+venv/
+env/
+
+# Bytecode et cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+*.egg
+
+# Variables d'environnement et secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# IDE et éditeurs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Cursor Editor
+.cursor/
+.cursorindex
+.cursorules
+*.cursorrules
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs et fichiers temporaires
+*.log
+*.tmp
+.cache/

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Outil de recommandation de modèles LLM adaptés à votre machine (RAM, CPU, GPU). Comparez et choisissez vos modèles.">
+  <title>Recommandation de modèles LLM pour votre machine</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-row">
+        <h1>DF Modelfit</h1>
+        <div class="lang-switcher" role="group" aria-label="Langue">
+          <button type="button" class="btn-lang active" data-lang="fr" title="Français">🇫🇷</button>
+          <button type="button" class="btn-lang" data-lang="en" title="English">🇬🇧</button>
+        </div>
+        <div class="theme-switcher" role="group" aria-label="Thème">
+          <button type="button" class="btn-theme active" data-theme="dark" title="Fond noir">🌙 Noir</button>
+          <button type="button" class="btn-theme" data-theme="light" title="Fond blanc">☀️ Blanc</button>
+        </div>
+      </div>
+      <p class="tagline" data-i18n="tagline">Quels modèles LLM tournent sur votre machine ? — DF AI Research</p>
+    </header>
+
+    <main>
+    <section class="system card" id="system-card">
+      <h2 data-i18n="yourConfig">Votre configuration</h2>
+      <div class="system-grid" id="system-grid">
+        <div class="skeleton" data-i18n="loading">Chargement…</div>
+      </div>
+    </section>
+
+    <section class="filters card">
+      <form id="filters-form" class="filters-form" role="search" data-i18n-aria-label="filtersFormAriaLabel" aria-label="Filtres des modèles">
+      <div class="filters-row">
+        <label>
+          <span data-i18n="search">Recherche</span>
+          <input type="text" id="search" data-i18n-placeholder="searchPlaceholder" placeholder="Nom ou fournisseur…" autocomplete="off">
+        </label>
+        <label>
+          <span data-i18n="fitTable">Fit (table)</span>
+          <select id="filter-fit">
+            <option value="" data-i18n="all">Tous</option>
+            <option value="parfait" data-i18n="parfait">Parfait</option>
+            <option value="bon" data-i18n="bon">Bon</option>
+            <option value="marginal" data-i18n="marginal">Marginal</option>
+            <option value="trop_juste" data-i18n="trop_juste">Trop juste</option>
+          </select>
+        </label>
+        <label data-i18n-title="usageIconsTitle">
+          <span data-i18n="usageIcons">Usage (icônes)</span>
+          <select id="filter-usage">
+            <option value="" data-i18n="all">Tous</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="fitMinApi">Fit min. (API)</span>
+          <select id="min-fit">
+            <option value="marginal" data-i18n="fitMarginal">≥ Marginal</option>
+            <option value="bon" data-i18n="fitBon">≥ Bon</option>
+            <option value="parfait" data-i18n="fitParfaitOnly">Parfait uniquement</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="paramsMax">Params max (B)</span>
+          <input type="number" id="max-params" min="0" step="1" data-i18n-placeholder="paramsPlaceholder" placeholder="ex. 8">
+        </label>
+        <label>
+          <span data-i18n="contextMin">Contexte min.</span>
+          <input type="number" id="min-context" min="0" step="1024" data-i18n-placeholder="contextPlaceholder" placeholder="ex. 8192">
+        </label>
+        <label>
+          <span data-i18n="results">Résultats</span>
+          <input type="number" id="limit" min="1" max="50" step="1" value="20">
+        </label>
+      </div>
+      <div class="filters-row filters-row-secondary">
+        <div class="scenario-group">
+          <span class="scenario-label" data-i18n="scenariosQuick">Scénarios rapides</span>
+          <div class="scenario-buttons">
+            <button type="button" class="btn btn-scenario" data-scenario="coding" data-i18n="scenarioCoding">Dév. / coding</button>
+            <button type="button" class="btn btn-scenario" data-scenario="chat" data-i18n="scenarioChat">Chat général</button>
+            <button type="button" class="btn btn-scenario" data-scenario="reasoning" data-i18n="scenarioReasoning">Reasoning profond</button>
+            <button type="button" class="btn btn-scenario" data-scenario="edge" data-i18n="scenarioEdge">Edge / léger</button>
+          </div>
+        </div>
+        <div class="filters-actions">
+          <label class="max-models-hf-label" data-i18n-title="maxPerUsageHfTitle" title="Max max de modèles par usage (pipeline HF) : 10–500. Ex. 100 = jusqu’à 100 par type (génération, embeddings, etc.).">
+            <span data-i18n="maxPerUsageHf">Max par usage (HF)</span>
+            <select id="max-models-hf" aria-label="Max modèles par usage Hugging Face">
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="20" selected>20</option>
+            </select>
+          </label>
+          <button type="button" id="btn-reset" class="btn" data-i18n-title="resetTitle" data-i18n="reset">Réinitialiser</button>
+          <button type="button" id="btn-refresh" class="btn" data-i18n="launchRecommendation">Lancer la recommandation</button>
+          <button type="button" id="btn-hf" class="btn btn-hf" data-i18n-title="updateModelsTitle" data-i18n="updateModels">Mise à jour des modèles</button>
+          <span id="last-update" class="last-update" aria-live="polite"></span>
+        </div>
+      </div>
+      </form>
+    </section>
+
+    <section class="models card">
+      <div id="background-refresh-banner" class="background-refresh-banner" aria-live="polite" hidden>
+        <span class="background-refresh-msg" data-i18n="refreshBannerMsg">Mise à jour Hugging Face en arrière-plan (54 × Max)…</span>
+        <span class="background-refresh-done" hidden data-i18n="refreshBannerDone">Mise à jour terminée. Liste actualisée.</span>
+      </div>
+      <h2><span data-i18n="models">Modèles</span> (<span id="count">0</span>)</h2>
+      <div class="table-wrap">
+        <table class="models-table">
+          <thead>
+            <tr>
+              <th data-i18n-title="thSelTitle" data-i18n="thSel" title="Sel.">Sel.</th>
+              <th data-i18n-title="thFitTitle" data-i18n="thFit" title="Fit d’adaptation à votre machine : Parfait (recommandé), Bon, Marginal, ou Trop juste (ne passe pas)">Fit</th>
+              <th data-i18n-title="thStateTitle" data-i18n="thState" title="État">État</th>
+              <th data-i18n-title="thModelTitle" data-i18n="thModel" title="Modèle">Modèle</th>
+              <th data-i18n-title="thProviderTitle" data-i18n="thProvider" title="Fournisseur">Fournisseur</th>
+              <th class="sortable" data-sort="params" data-i18n-title="thParamsTitle" title="Params"><span data-i18n="thParams">Params</span> <span class="sort-indicator" id="sort-params"></span></th>
+              <th class="sortable" data-sort="mem" data-i18n-title="thMemTitle" title="Mémoire"><span data-i18n="thMem">Mémoire</span> <span class="sort-indicator" id="sort-mem"></span></th>
+              <th data-i18n-title="thModeTitle" data-i18n="thMode" title="Mode">Mode</th>
+              <th class="sortable" data-sort="context" data-i18n-title="thContextTitle" title="Contexte"><span data-i18n="thContext">Contexte</span> <span class="sort-indicator" id="sort-context"></span></th>
+              <th data-i18n-title="thUsageTitle" data-i18n="thUsage" title="Usage">Usage</th>
+              <th class="sortable" data-sort="avis" data-i18n-title="thAvisTitle" title="Avis"><span data-i18n="thAvis">Avis</span> <span class="sort-indicator" id="sort-avis"></span></th>
+            </tr>
+          </thead>
+          <tbody id="models-tbody">
+            <tr><td colspan="11" class="loading" data-i18n="loadingModels">Chargement des modèles…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination" data-i18n-aria-label="paginationAriaLabel" aria-label="Pagination des modèles">
+        <button type="button" id="btn-prev" class="btn btn-pagination" data-i18n-title="prevPageTitle" data-i18n="prevPage">← Précédente</button>
+        <span id="pagination-info" class="pagination-info">Page 1 sur 1</span>
+        <button type="button" id="btn-next" class="btn btn-pagination" data-i18n-title="nextPageTitle" data-i18n="nextPage">Suivante →</button>
+      </div>
+      <div class="usage-legend" id="usage-legend">
+        <span class="usage-legend-title" data-i18n="usageLegendTitle">Usage (un modèle peut avoir plusieurs icônes) :</span>
+        <span id="usage-legend-items"></span>
+      </div>
+    </section>
+
+    <section class="compare card" id="compare-card">
+      <h2 data-i18n="compareTitle">Comparaison & graphiques</h2>
+      <p class="compare-help">Sélectionnez jusqu’à 3 modèles dans le tableau pour comparer leurs scores (Qualité, Vitesse, Fit, Contexte) et voir un exemple de snippet Python.</p>
+      <div class="compare-layout">
+        <div class="compare-chart-wrap">
+          <canvas id="scores-chart" data-i18n-aria-label="chartAriaLabel" aria-label="Comparaison des scores des modèles" role="img"></canvas>
+        </div>
+        <div class="compare-list" id="compare-list"></div>
+      </div>
+      <div class="snippet">
+        <h3 data-i18n="snippetTitle">Snippet Python pour le modèle sélectionné</h3>
+        <p class="snippet-help" data-i18n="snippetHelp">Ce code illustre comment interroger un serveur de modèle local avec le modèle choisi. Adaptez l’URL et les paramètres selon votre runtime.</p>
+        <pre><code id="python-snippet"></code></pre>
+        <button type="button" id="btn-copy-snippet" class="btn btn-copy" data-i18n="copyCode">Copier le code</button>
+      </div>
+    </section>
+
+    <section class="history card" id="history-card">
+      <div class="history-header">
+        <h2 data-i18n="historyTitle">Historique des recommandations</h2>
+        <button type="button" id="btn-reset-history" class="btn btn-secondary" data-i18n-title="historyResetTitle" data-i18n="historyReset">Réinitialiser</button>
+      </div>
+      <p class="history-help" data-i18n="historyHelp">Chaque combinaison de filtres utilisée est sauvegardée localement dans votre navigateur. Cliquez sur une entrée pour rejouer la configuration.</p>
+      <div id="history-list" class="history-list">
+        <p class="history-empty" data-i18n="historyEmpty">Aucune recommandation enregistrée pour l’instant.</p>
+      </div>
+    </section>
+
+    </main>
+    <footer class="footer">
+      <p class="footer-text" data-i18n-html="footerTextHtml"><strong>DF Modelfit</strong> — par <strong>DF AI Research</strong>. Données modèles : Hugging Face. Fit calculé localement (RAM/VRAM).</p>
+      <p class="footer-support" data-i18n-html="footerSupportHtml">Soutien à la recherche : <a href="#soutien" target="_blank" rel="noopener noreferrer">Soutenez notre recherche</a>.</p>
+      <p class="footer-license" data-i18n-html="footerLicenseHtml">Licence MIT gratuite pour le public. Sociétés et usage en recherche : contacter DF AI Research. <a href="/license" rel="license" data-i18n="licenseLink">Voir la licence</a>.</p>
+    </footer>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

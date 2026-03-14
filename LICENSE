@@ -1,0 +1,83 @@
+LICENCE — DF Modelfit / DF AI Research
+========================================
+
+Copyright (c) DF AI Research. Tous droits réservés.
+
+---
+
+1. USAGE GRATUIT POUR LE PUBLIC (PARTICULIERS)
+------------------------------------------------
+L'autorisation d'utilisation gratuite est accordée aux personnes physiques
+(particuliers) pour un usage personnel et non commercial du logiciel, sous
+réserve de conserver la présente notice et la mention de provenance
+« DF Modelfit — DF AI Research » dans toute copie ou utilisation.
+
+---
+
+2. ENTREPRISES, LABORATOIRES ET USAGE PROFESSIONNEL — LICENCE ÉCRITE ET SIGNÉE OBLIGATOIRE
+-------------------------------------------------------------------------------------------
+Toute utilisation du logiciel par ou pour :
+  - une société, entreprise, société commerciale ou toute personne morale ;
+  - un laboratoire, institut de recherche, université ou tout établissement
+    à caractère professionnel ou de recherche ;
+  - tout usage à titre commercial, professionnel ou dans le cadre d’une
+    activité économique
+
+est STRICTEMENT INTERDITE sans une licence écrite distincte, rédigée et
+SIGNÉE DE LA MAIN du titulaire des droits (auteur / DF AI Research).
+
+AUCUNE AUTRE FORME n’est acceptée :
+  - pas d’accord par courriel, messagerie ou formulaire en ligne ;
+  - pas d’acceptation par clic (« click-wrap ») ou conditions générales ;
+  - pas d’accord verbal ou tacite ;
+  - pas de simple mention sur un site ou un dépôt public.
+
+Seule une licence écrite sur support durable, signée manuellement par
+le titulaire des droits, est valable pour un tel usage. Toute utilisation
+sans cette licence écrite et signée constitue une contrefaçon et un usage
+non autorisé, passible des poursuites prévues par la loi.
+
+Pour obtenir une licence pour un usage entreprise ou laboratoire :
+contacter DF AI Research : contact@dfairesearch.com ou https://dfairesearch.com/
+et demander une licence écrite à signer.
+
+---
+
+3. EXCLUSION DE GARANTIE (DISCLAIMER)
+-------------------------------------
+LE LOGICIEL EST FOURNI « EN L’ÉTAT », SANS GARANTIE D’AUCUNE SORTE,
+EXPRESSE OU IMPLICITE, NOTAMMENT SANS GARANTIE DE MARCHANDISE, D’ADÉQUATION
+À UN USAGE PARTICULIER OU D’ABSENCE DE CONTREFAÇON. EN AUCUN CAS LES
+AUTEURS OU TITULAIRES DES DROITS NE POURRONT ÊTRE TENUS POUR RESPONSABLES
+DE TOUTE RÉCLAMATION, DOMMAGE OU AUTRE RESPONSABILITÉ, QUE CE SOIT DANS
+LE CADRE D’UN CONTRAT, D’UN DÉLIT OU AUTRE, DÉCOULANT DU LOGICIEL OU DE
+SON UTILISATION.
+
+---
+
+4. LIMITATION DE RESPONSABILITÉ
+-------------------------------
+DANS TOUTE LA MESURE PERMISE PAR LE DROIT APPLICABLE, EN AUCUN CAS LE
+TITULAIRE DES DROITS OU LES AUTEURS NE SERONT RESPONSABLES ENVERS VOUS
+POUR TOUT DOMMAGE INDIRECT, ACCESSOIRE, SPÉCIAL, EXEMPLAIRE OU CONSÉCUTIF
+(NOTAMMENT PERTE DE DONNÉES, DE CHIFFRE D’AFFAIRES, DE BÉNÉFICES, D’USAGE
+OU D’INFORMATION) DÉCOULANT DE L’UTILISATION OU DE L’IMPOSSIBILITÉ D’UTILISER
+LE LOGICIEL, MÊME SI ILS ONT ÉTÉ AVISÉS DE LA POSSIBILITÉ DE TELS DOMMAGES.
+
+---
+
+5. RÉSERVES
+-----------
+La présente licence ne confère aucune marque, brevet ou autre droit de
+propriété intellectuelle au-delà de l’usage expressément autorisé.
+Les données et modèles mentionnés (ex. Hugging Face) restent régis par
+leurs propres conditions.
+
+---
+
+Summary (English):
+- Free use for individuals (personal, non-commercial) with attribution.
+- Companies, laboratories, research and commercial use: ONLY a written
+  license signed by hand by the copyright holder is accepted. No other
+  form (email, click-wrap, verbal) is valid.
+- Disclaimer of warranty and limitation of liability as above.
