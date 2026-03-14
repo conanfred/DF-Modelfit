@@ -6,12 +6,17 @@
   <meta name="description" content="Outil de recommandation de modèles LLM adaptés à votre machine (RAM, CPU, GPU). Comparez et choisissez vos modèles.">
   <title>Recommandation de modèles LLM pour votre machine</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#0f0f12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  <noscript><p style="padding:2rem;text-align:center;font-family:sans-serif;">Ce site nécessite JavaScript pour fonctionner. Veuillez l'activer dans votre navigateur.</p></noscript>
   <div class="app">
     <header class="header">
       <div class="header-row">
@@ -32,6 +37,7 @@
     <section class="system card" id="system-card">
       <div class="system-header-row">
         <h2 data-i18n="yourConfig">Votre configuration</h2>
+        <span id="custom-profile-badge" class="custom-profile-badge" aria-live="polite">⚙️ Profil personnalisé actif</span>
         <button type="button" id="btn-toggle-custom" class="btn btn-secondary btn-small" data-i18n="customProfile">Profil personnalisé</button>
       </div>
       <div class="system-grid" id="system-grid">
@@ -69,9 +75,10 @@
     <section class="filters card">
       <form id="filters-form" class="filters-form" role="search" data-i18n-aria-label="filtersFormAriaLabel" aria-label="Filtres des modèles">
       <div class="filters-row">
-        <label>
+        <label class="search-autocomplete-wrap">
           <span data-i18n="search">Recherche</span>
-          <input type="text" id="search" data-i18n-placeholder="searchPlaceholder" placeholder="Nom ou fournisseur…" autocomplete="off">
+          <input type="text" id="search" data-i18n-placeholder="searchPlaceholder" placeholder="Nom ou fournisseur…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="search-autocomplete-list">
+          <div id="search-autocomplete-list" class="search-autocomplete" role="listbox"></div>
         </label>
         <label>
           <span data-i18n="fitTable">Fit (table)</span>
@@ -149,8 +156,11 @@
         <div class="export-buttons">
           <button type="button" id="btn-export-csv" class="btn btn-secondary btn-small" title="Export CSV">📥 CSV</button>
           <button type="button" id="btn-export-json" class="btn btn-secondary btn-small" title="Export JSON">📥 JSON</button>
+          <button type="button" id="btn-compact" class="btn btn-secondary btn-small btn-compact" title="Compact / Détaillé">⊟ Compact</button>
         </div>
       </div>
+      <div id="fit-distribution" class="fit-distribution-bar" role="img" aria-label="Distribution des niveaux de fit"></div>
+      <div id="fit-distribution-legend" class="fit-distribution-legend"></div>
       <div class="table-wrap">
         <table class="models-table">
           <thead>
@@ -205,6 +215,63 @@
       </div>
     </section>
 
+    <section class="runtimes card" id="runtimes-card">
+      <div class="runtimes-header-row">
+        <h2 data-i18n="runtimesTitle">IA locales installées</h2>
+        <button type="button" id="btn-refresh-runtimes" class="btn btn-secondary btn-small">🔄 Actualiser</button>
+      </div>
+      <p class="runtimes-help" data-i18n="runtimesHelp">Détection automatique des runtimes IA (Ollama, LM Studio, llama.cpp). Gérez vos modèles locaux : installer, mettre à jour ou supprimer.</p>
+
+      <div id="runtimes-status" class="runtimes-status">
+        <div class="skeleton">Détection en cours…</div>
+      </div>
+
+      <div id="local-models-section" class="local-models-section" hidden>
+        <div class="local-models-header">
+          <h3 data-i18n="localModelsTitle">Modèles installés localement</h3>
+          <span id="local-models-count" class="badge-count">0</span>
+        </div>
+        <div class="local-models-table-wrap">
+          <table class="local-models-table">
+            <thead>
+              <tr>
+                <th>Modèle</th>
+                <th>Runtime</th>
+                <th>Taille</th>
+                <th>Quantification</th>
+                <th>Famille</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="local-models-tbody">
+              <tr><td colspan="6" class="loading">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="install-model-section" class="install-model-section">
+        <h3 data-i18n="installModelTitle">Installer un modèle</h3>
+        <div class="install-model-form">
+          <input type="text" id="install-model-name" placeholder="ex. llama3.2:3b, qwen2.5:7b, mistral:7b" class="install-model-input">
+          <button type="button" id="btn-install-model" class="btn">Installer via Ollama</button>
+        </div>
+        <div class="install-suggestions">
+          <span class="install-suggestions-label">Suggestions :</span>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="llama3.2:3b">llama3.2:3b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="qwen2.5:7b">qwen2.5:7b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="mistral:7b">mistral:7b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="phi3.5:3.8b">phi3.5:3.8b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="gemma2:2b">gemma2:2b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="deepseek-r1:8b">deepseek-r1:8b</button>
+        </div>
+        <div id="install-progress" class="install-progress" hidden>
+          <div class="install-progress-bar"></div>
+          <span class="install-progress-text">Installation en cours…</span>
+        </div>
+      </div>
+    </section>
+
     <section class="changelog card" id="changelog-card" hidden>
       <h2 data-i18n="changelogTitle">Changelog des modèles</h2>
       <p class="changelog-help" data-i18n="changelogHelp">Modèles récemment ajoutés ou mis à jour lors des dernières synchronisations Hugging Face.</p>
@@ -223,13 +290,118 @@
     </section>
 
     </main>
+    <div id="toast-container" class="toast-container" aria-live="polite" role="status"></div>
+    <button type="button" id="scroll-top-btn" class="scroll-top-btn" aria-label="Retour en haut" title="Retour en haut">↑</button>
+    <div id="row-tooltip" class="row-tooltip"></div>
     <footer class="footer">
       <p class="footer-text" data-i18n-html="footerTextHtml"><strong>DF Modelfit</strong> — par <strong>DF AI Research</strong>. Données modèles : Hugging Face. Fit calculé localement (RAM/VRAM).</p>
       <p class="footer-support" data-i18n-html="footerSupportHtml">Soutien à la recherche : <a href="#soutien" target="_blank" rel="noopener noreferrer">Soutenez notre recherche</a>.</p>
       <p class="footer-license" data-i18n-html="footerLicenseHtml">Licence MIT gratuite pour le public. Sociétés et usage en recherche : contacter DF AI Research. <a href="/license" rel="license" data-i18n="licenseLink">Voir la licence</a>.</p>
     </footer>
   </div>
+  <!-- Chat Panel -->
+  <div id="chat-panel" class="chat-panel">
+    <div class="chat-panel-header">
+      <div class="chat-panel-title-row">
+        <h3 data-i18n="chatTitle">💬 Chat IA</h3>
+        <button type="button" id="btn-chat-close" class="btn-chat-close" title="Fermer" aria-label="Fermer" data-i18n-title="chatClose">✕</button>
+      </div>
+      <div class="chat-model-select-row">
+        <select id="chat-model-select" class="chat-model-select">
+          <option value="" data-i18n="chatSelectModel">Sélectionner un modèle…</option>
+        </select>
+        <div class="chat-model-badges" id="chat-model-badges"></div>
+      </div>
+      <div class="chat-model-info" id="chat-model-info"></div>
+      <div class="chat-settings-toggle-row">
+        <button type="button" id="btn-chat-settings-toggle" class="btn btn-small btn-secondary" data-i18n="chatSettings">⚙️ Paramètres</button>
+      </div>
+      <div id="chat-settings-drawer" class="chat-settings-drawer">
+        <div class="chat-settings-group">
+          <label><span data-i18n="chatPresetSystem">Preset système</span>
+            <select id="chat-preset-select" class="chat-settings-select">
+              <option value="default">🤖 Default</option>
+              <option value="coder">💻 Coder</option>
+              <option value="analyst">📊 Analyst</option>
+              <option value="vision">👁️ Vision</option>
+              <option value="creative">🎨 Creative</option>
+            </select>
+          </label>
+          <label><span data-i18n="chatCustomPrompt">System prompt personnalisé</span>
+            <textarea id="chat-system-prompt" class="chat-settings-textarea" rows="3" placeholder="Laisser vide pour utiliser le preset…"></textarea>
+          </label>
+          <label><span><span data-i18n="chatTemperature">Temperature</span>: <strong id="chat-temp-val">0.7</strong></span>
+            <input type="range" id="chat-temperature" min="0" max="2" step="0.1" value="0.7" class="chat-slider">
+          </label>
+          <label><span><span data-i18n="chatTopP">Top P</span>: <strong id="chat-topp-val">0.9</strong></span>
+            <input type="range" id="chat-top-p" min="0" max="1" step="0.05" value="0.9" class="chat-slider">
+          </label>
+          <label><span data-i18n="chatTopK">Top K</span>
+            <input type="number" id="chat-top-k" min="1" max="100" value="40" class="chat-settings-input">
+          </label>
+          <label><span data-i18n="chatMaxTokens">Max tokens</span>
+            <input type="number" id="chat-num-predict" min="1" max="131072" value="2048" class="chat-settings-input">
+          </label>
+          <label><span data-i18n="chatContextWindow">Context window</span>
+            <input type="number" id="chat-num-ctx" min="256" max="131072" value="4096" class="chat-settings-input">
+          </label>
+          <label><span><span data-i18n="chatRepeatPenalty">Repeat penalty</span>: <strong id="chat-repeat-val">1.1</strong></span>
+            <input type="range" id="chat-repeat-penalty" min="1" max="2" step="0.05" value="1.1" class="chat-slider">
+          </label>
+          <label><span data-i18n="chatSeed">Seed</span>
+            <input type="number" id="chat-seed" min="0" value="0" class="chat-settings-input">
+          </label>
+          <button type="button" id="btn-chat-reset-defaults" class="btn btn-small btn-secondary" style="margin-top:0.5rem" data-i18n="chatResetDefaults">Réinitialiser</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-conversations-bar">
+      <button type="button" id="btn-chat-new" class="btn btn-small" data-i18n="chatNewConv" aria-label="Nouvelle conversation">➕ Nouvelle</button>
+      <button type="button" id="btn-chat-convos-toggle" class="btn btn-small btn-secondary" data-i18n="chatConversations" aria-label="Conversations">📋 Conversations</button>
+    </div>
+    <div id="chat-conversations-list" class="chat-conversations-list"></div>
+
+    <div id="chat-messages" class="chat-messages" role="log" aria-live="polite">
+      <div class="chat-welcome">
+        <p><strong data-i18n="chatWelcomeTitle">Discutez avec vos modèles IA locaux</strong></p>
+        <p class="chat-welcome-sub" data-i18n="chatWelcomeSub">Sélectionnez un modèle installé via Ollama, posez vos questions, ou utilisez 📸 pour partager votre écran.</p>
+      </div>
+    </div>
+
+    <div id="chat-image-zone" class="chat-image-zone" hidden>
+      <div id="chat-drop-zone" class="chat-drop-zone">
+        <span data-i18n="chatDropImage">Glissez-déposez une image ici</span>
+      </div>
+      <div class="chat-image-actions">
+        <button type="button" id="btn-chat-screenshot" class="btn btn-small btn-secondary" data-i18n="chatCapture" aria-label="Capture écran">📸 Capture</button>
+        <label class="btn btn-small btn-secondary chat-file-label" data-i18n="chatAttach" aria-label="Joindre image">
+          📎 Joindre
+          <input type="file" id="chat-file-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+        </label>
+      </div>
+      <div id="chat-image-preview" class="chat-image-preview" hidden>
+        <img id="chat-preview-img" alt="Image jointe">
+        <button type="button" id="btn-chat-remove-image" class="btn-chat-remove-image" title="Retirer" aria-label="Retirer l'image">✕</button>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <form id="chat-input-form" class="chat-input-form">
+        <textarea id="chat-input" class="chat-input" rows="1" placeholder="Écrivez votre message…" data-i18n-placeholder="chatPlaceholder" disabled></textarea>
+        <div class="chat-input-buttons">
+          <button type="submit" id="btn-chat-send" class="btn btn-chat-send" disabled title="Envoyer" aria-label="Envoyer" data-i18n-title="chatSend">➤</button>
+          <button type="button" id="btn-chat-stop" class="btn btn-chat-stop" hidden title="Arrêter" aria-label="Arrêter" data-i18n-title="chatStop">⬛</button>
+          <button type="button" id="btn-chat-regenerate" class="btn btn-chat-regenerate" hidden title="Régénérer" aria-label="Régénérer" data-i18n-title="chatRegenerate">🔄</button>
+        </div>
+      </form>
+      <div class="chat-token-estimate" id="chat-token-estimate"></div>
+    </div>
+  </div>
+  <button type="button" id="btn-chat-toggle" class="btn-chat-toggle" title="Ouvrir le chat IA" aria-label="Ouvrir le chat IA" data-i18n-title="chatOpenPanel">💬</button>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

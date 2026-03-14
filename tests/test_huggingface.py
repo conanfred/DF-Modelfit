@@ -1,5 +1,4 @@
 """Tests pour api/huggingface.py — parsing et utilitaires."""
-import pytest
 from api.huggingface import (
     _format_param_count,
     _estimate_ram,

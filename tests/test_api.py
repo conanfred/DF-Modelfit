@@ -1,10 +1,8 @@
 """Tests pour les routes API de main.py (FastAPI TestClient)."""
-import json
-
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app, MODELS, load_models
+from main import app, load_models
 
 
 @pytest.fixture(autouse=True)
@@ -164,3 +162,58 @@ class TestRefreshRateLimit:
         resp = client.post("/api/refresh")
         assert resp.status_code == 429
         main._refresh_last_by_ip.clear()
+
+
+class TestRuntimesEndpoints:
+    def test_runtimes_returns_list(self):
+        resp = client.get("/api/runtimes")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "runtimes" in data
+        assert isinstance(data["runtimes"], list)
+        assert len(data["runtimes"]) >= 3
+        assert "local_models" in data
+        assert "local_count" in data
+
+    def test_runtimes_models(self):
+        resp = client.get("/api/runtimes/models")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "models" in data
+        assert "matched" in data
+
+    def test_runtimes_running(self):
+        resp = client.get("/api/runtimes/running")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "models" in data
+
+    def test_install_requires_name(self):
+        resp = client.post(
+            "/api/runtimes/install",
+            json={"name": ""},
+        )
+        assert resp.status_code == 422
+
+
+class TestChatEndpoints:
+    def test_chat_models(self):
+        resp = client.get("/api/chat/models")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "available" in data
+        assert "models" in data
+
+    def test_chat_requires_model(self):
+        resp = client.post(
+            "/api/chat",
+            json={"model": "", "messages": [{"role": "user", "content": "hi"}]},
+        )
+        assert resp.status_code == 422
+
+    def test_chat_requires_messages(self):
+        resp = client.post(
+            "/api/chat",
+            json={"model": "llama3", "messages": []},
+        )
+        assert resp.status_code == 422

@@ -54,3 +54,4 @@ Thumbs.db
 
 # Exclu de GitHub
 opentimestamps/
+.coverage

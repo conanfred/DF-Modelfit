@@ -20,6 +20,22 @@ from pydantic import BaseModel, Field
 from api.system import detect, detect_custom
 from api.fit import analyser, to_dict
 from api.huggingface import fetch_models_from_hf
+from api.runtimes import (
+    detect_all_runtimes,
+    list_all_local_models,
+    match_local_to_hf,
+    ollama_pull_model,
+    ollama_delete_model,
+    ollama_model_info,
+    ollama_running_models,
+)
+from api.chat import (
+    ollama_chat_stream,
+    ollama_is_available,
+    ollama_list_chat_models,
+    get_model_defaults,
+    get_system_presets,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -428,8 +444,12 @@ def api_models(search: str | None = None, fit: str | None = None):
         except Exception:
             logger.debug("Skipping model %s: analysis failed", m.get("name", "?"), exc_info=True)
             continue
-        if search and search.lower() not in (m.get("name") or "").lower() and search.lower() not in (m.get("provider") or "").lower():
-            continue
+        if search:
+            q = search.lower()
+            name_lower = (m.get("name") or "").lower()
+            prov_lower = (m.get("provider") or "").lower()
+            if q not in name_lower and q not in prov_lower:
+                continue
         if fit and f.fit_level != fit:
             continue
         d["status"] = _model_status(m, last)
@@ -621,6 +641,148 @@ def api_changelog():
             })
     entries.sort(key=lambda x: x.get("updated_at") or "", reverse=True)
     return {"entries": entries[:50], "last_updated": last}
+
+
+# ---------------------------------------------------------------------------
+# Runtime management endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/runtimes")
+def api_runtimes():
+    """Détecte les runtimes IA installés (Ollama, LM Studio, llama.cpp)."""
+    runtimes = detect_all_runtimes()
+    local_models = list_all_local_models()
+    matched = match_local_to_hf(local_models, MODELS)
+    return {
+        "runtimes": runtimes,
+        "local_models": local_models,
+        "local_count": len(local_models),
+        "matched_count": len(matched),
+    }
+
+
+@app.get("/api/runtimes/models")
+def api_runtimes_models():
+    """Liste tous les modèles installés localement."""
+    local_models = list_all_local_models()
+    matched = match_local_to_hf(local_models, MODELS)
+    return {
+        "models": local_models,
+        "matched": {k: v for k, v in matched.items()},
+    }
+
+
+@app.get("/api/runtimes/running")
+def api_runtimes_running():
+    """Liste les modèles actuellement chargés en mémoire."""
+    return {"models": ollama_running_models()}
+
+
+@app.post("/api/runtimes/install")
+async def api_runtimes_install(request: Request):
+    """Installe (pull) un modèle dans Ollama."""
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(422, "Le nom du modèle est requis.")
+    import asyncio
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, ollama_pull_model, name)
+    logger.info("Install model %s: %s", name, result)
+    return result
+
+
+@app.post("/api/runtimes/delete")
+async def api_runtimes_delete(request: Request):
+    """Supprime un modèle d'Ollama."""
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(422, "Le nom du modèle est requis.")
+    result = ollama_delete_model(name)
+    logger.info("Delete model %s: %s", name, result)
+    return result
+
+
+@app.get("/api/runtimes/model/{name:path}")
+def api_runtimes_model_info(name: str):
+    """Détails d'un modèle Ollama installé."""
+    info = ollama_model_info(name)
+    if info is None:
+        raise HTTPException(404, f"Modèle {name} non trouvé.")
+    return info
+
+
+# ---------------------------------------------------------------------------
+# Chat endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/chat/models")
+def api_chat_models():
+    """Liste les modèles avec capacités et paramètres par défaut."""
+    available = ollama_is_available()
+    models = ollama_list_chat_models() if available else []
+    for m in models:
+        m["defaults"] = get_model_defaults(m)
+    return {"available": available, "models": models}
+
+
+@app.get("/api/chat/presets")
+def api_chat_presets():
+    """Retourne les presets de system prompts."""
+    return {"presets": get_system_presets()}
+
+
+@app.post("/api/chat")
+async def api_chat(request: Request):
+    """Chat streaming avec paramètres complets (SSE)."""
+    body = await request.json()
+    model = body.get("model", "").strip()
+    messages = body.get("messages", [])
+    system_prompt = body.get("system_prompt")
+    options = body.get("options")
+    if not model:
+        raise HTTPException(422, "Le nom du modèle est requis.")
+    if not messages:
+        raise HTTPException(422, "Au moins un message est requis.")
+
+    import asyncio
+    import queue
+    import threading
+
+    async def generate():
+        q: queue.Queue = queue.Queue()
+
+        def _stream_worker():
+            try:
+                for chunk in ollama_chat_stream(
+                    model, messages, system_prompt, options,
+                ):
+                    q.put(chunk)
+            except Exception as exc:
+                q.put({"error": True, "message": {"content": ""}, "detail": str(exc)})
+            finally:
+                q.put(None)
+
+        thread = threading.Thread(target=_stream_worker, daemon=True)
+        thread.start()
+
+        loop = asyncio.get_event_loop()
+        while True:
+            chunk = await loop.run_in_executor(None, q.get)
+            if chunk is None:
+                break
+            yield f"data: {json.dumps(chunk)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
   const API = "/api";
   const PAGE_SIZE = 100;
   /** URL du lien de soutien financier à la recherche. */
-  const SUPPORT_URL = "https://paypal.me/conanfredleseul";
+  const SUPPORT_URL = "https://www.paypal.me/conanfredleseul";
   let system = null;
   let models = [];
   let currentPage = 0;
@@ -170,6 +170,49 @@
       scenarioReasoningLabel: "Reasoning profond",
       scenarioEdgeLabel: "Edge / léger",
       scenarioCustomLabel: "Personnalisé",
+      runtimesTitle: "IA locales installées",
+      runtimesHelp: "Détection automatique des runtimes IA (Ollama, LM Studio, llama.cpp). Gérez vos modèles locaux : installer, mettre à jour ou supprimer.",
+      localModelsTitle: "Modèles installés localement",
+      installModelTitle: "Installer un modèle",
+      installedBadge: "Installé",
+      chatTitle: "💬 Chat IA",
+      chatClose: "Fermer",
+      chatSelectModel: "Sélectionner un modèle…",
+      chatSettings: "⚙️ Paramètres",
+      chatPresetSystem: "Preset système",
+      chatCustomPrompt: "System prompt personnalisé",
+      chatTemperature: "Temperature",
+      chatTopP: "Top P",
+      chatTopK: "Top K",
+      chatMaxTokens: "Max tokens",
+      chatContextWindow: "Context window",
+      chatRepeatPenalty: "Repeat penalty",
+      chatSeed: "Seed",
+      chatResetDefaults: "Réinitialiser",
+      chatNewConv: "➕ Nouvelle",
+      chatConversations: "📋 Conversations",
+      chatWelcomeTitle: "Discutez avec vos modèles IA locaux",
+      chatWelcomeSub: "Sélectionnez un modèle installé via Ollama, posez vos questions, ou utilisez 📸 pour partager votre écran.",
+      chatDropImage: "Glissez-déposez une image ici",
+      chatCapture: "📸 Capture",
+      chatAttach: "📎 Joindre",
+      chatPlaceholder: "Écrivez votre message…",
+      chatSend: "Envoyer",
+      chatStop: "Arrêter",
+      chatRegenerate: "Régénérer",
+      chatGenerating: "Génération…",
+      chatCopy: "Copier",
+      chatCopied: "Copié ✓",
+      chatOllamaNotRunning: "Ollama non démarré…",
+      chatNoModels: "Aucun modèle installé",
+      chatNoConversations: "Aucune conversation",
+      chatDeleteConv: "Supprimer",
+      chatScreenCaptured: "Écran capturé !",
+      chatResetDone: "Paramètres réinitialisés",
+      chatOpenPanel: "Ouvrir le chat IA",
+      chatError: "Erreur : ",
+      chatErrorCheck: "vérifiez qu'Ollama tourne",
+      chatErrorUnknown: "inconnue",
     },
     en: {
       titlePage: "LLM model recommendation for your machine",
@@ -312,6 +355,49 @@
       scenarioReasoningLabel: "Deep reasoning",
       scenarioEdgeLabel: "Edge / light",
       scenarioCustomLabel: "Custom",
+      runtimesTitle: "Local AI runtimes",
+      runtimesHelp: "Auto-detection of AI runtimes (Ollama, LM Studio, llama.cpp). Manage your local models: install, update, or delete.",
+      localModelsTitle: "Locally installed models",
+      installModelTitle: "Install a model",
+      installedBadge: "Installed",
+      chatTitle: "💬 AI Chat",
+      chatClose: "Close",
+      chatSelectModel: "Select a model…",
+      chatSettings: "⚙️ Settings",
+      chatPresetSystem: "System preset",
+      chatCustomPrompt: "Custom system prompt",
+      chatTemperature: "Temperature",
+      chatTopP: "Top P",
+      chatTopK: "Top K",
+      chatMaxTokens: "Max tokens",
+      chatContextWindow: "Context window",
+      chatRepeatPenalty: "Repeat penalty",
+      chatSeed: "Seed",
+      chatResetDefaults: "Reset defaults",
+      chatNewConv: "➕ New",
+      chatConversations: "📋 Conversations",
+      chatWelcomeTitle: "Chat with your local AI models",
+      chatWelcomeSub: "Select a model via Ollama, ask questions, or use 📸 to share your screen.",
+      chatDropImage: "Drop an image here",
+      chatCapture: "📸 Capture",
+      chatAttach: "📎 Attach",
+      chatPlaceholder: "Type your message…",
+      chatSend: "Send",
+      chatStop: "Stop",
+      chatRegenerate: "Regenerate",
+      chatGenerating: "Generating…",
+      chatCopy: "Copy",
+      chatCopied: "Copied ✓",
+      chatOllamaNotRunning: "Ollama not running…",
+      chatNoModels: "No models installed",
+      chatNoConversations: "No conversations",
+      chatDeleteConv: "Delete",
+      chatScreenCaptured: "Screen captured!",
+      chatResetDone: "Settings reset",
+      chatOpenPanel: "Open AI chat",
+      chatError: "Error: ",
+      chatErrorCheck: "check that Ollama is running",
+      chatErrorUnknown: "unknown",
     },
   };
 
@@ -602,8 +688,9 @@
         const providerLink = orgSlug ? `<a href="${escapeHtml("https://huggingface.co/" + encodeURI(orgSlug))}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(t("openOrgOnHf"))}">${escapeHtml(provider)}</a>` : escapeHtml(provider);
         const rowId = typeof row._id === "number" ? row._id : idx;
         const checked = selectedModels.some((s) => (s._id ?? s.model.name) === (row._id ?? row.model.name));
+        var favActive = isFavorite(name);
         return `<tr class="selectable-row${checked ? " row-selected" : ""}" data-row-id="${rowId}">
-          <td><input type="checkbox" class="model-select" data-row-id="${rowId}" ${checked ? "checked" : ""} aria-label="Sélectionner ce modèle pour la comparaison"></td>
+          <td><input type="checkbox" class="model-select" data-row-id="${rowId}" ${checked ? "checked" : ""} aria-label="${escapeHtml(t("selectForCompare"))}"> <button type="button" class="fav-star${favActive ? " fav-active" : ""}" data-fav-model="${escapeHtml(name)}" aria-label="Favori" title="Favori">${favActive ? "★" : "☆"}</button></td>
           <td><span class="fit-badge ${fitClass(row.fit_level)}">${escapeHtml(fitLabel)}</span></td>
           <td class="status-cell">${statusHtml}</td>
           <td class="mono">${modelLink}</td>
@@ -907,7 +994,9 @@
     if (data.last_updated) setLastUpdateText(data.last_updated);
     else if (system && system.models_last_updated) setLastUpdateText(system.models_last_updated);
     else setLastUpdateText(null);
+    if (el.modelsTbody) el.modelsTbody.setAttribute('aria-busy', 'false');
     selectedModels = [];
+    renderFitDistribution();
     applyFilters();
   }
 
@@ -1146,7 +1235,8 @@
       selectedModels.forEach(function(row) {
         let val = row[m.key];
         if (val == null && row.model) val = row.model[m.key];
-        html += "<td>" + escapeHtml(String(val != null ? val : "—")) + "</td>";
+        var cls = m.key === 'score' ? scoreColorClass(val) : '';
+        html += "<td" + (cls ? " class='" + cls + "'" : "") + ">" + escapeHtml(String(val != null ? val : "—")) + "</td>";
       });
       html += "</tr>";
     });
@@ -1179,14 +1269,16 @@
       if (!res.ok) throw new Error(res.statusText);
       const data = await res.json();
       isCustomProfile = true;
+      updateCustomProfileBadge();
       applyApiResponse(data);
     } catch (err) {
-      alert("Erreur : " + (err.message || err));
+      showToast("Erreur : " + (err.message || err), "error");
     }
   }
 
   async function resetCustomProfile() {
     isCustomProfile = false;
+    updateCustomProfileBadge();
     if (el.customPanel) el.customPanel.hidden = true;
     await fetchFullModels().catch(function() {});
   }
@@ -1216,6 +1308,1172 @@
     } catch (_) {
       if (el.changelogCard) el.changelogCard.hidden = true;
     }
+  }
+
+  // ===== Toast notification system =====
+  function showToast(msg, type) {
+    type = type || 'info';
+    var container = document.getElementById('toast-container');
+    if (!container) return;
+    var toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.setAttribute('role', 'status');
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(function() {
+      toast.classList.add('toast-hide');
+      setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    }, 3500);
+  }
+
+  // ===== Export feedback =====
+  function exportFileWithFeedback(format, btnEl) {
+    exportFile(format);
+    if (!btnEl) return;
+    var orig = btnEl.textContent;
+    btnEl.textContent = 'Downloaded ✓';
+    setTimeout(function() { btnEl.textContent = orig; }, 1500);
+  }
+
+  // ===== Fit distribution rendering =====
+  function renderFitDistribution() {
+    var bar = document.getElementById('fit-distribution');
+    var legend = document.getElementById('fit-distribution-legend');
+    if (!bar || !legend) return;
+    if (!models.length) { bar.innerHTML = ''; legend.innerHTML = ''; return; }
+    var counts = { parfait: 0, bon: 0, marginal: 0, trop_juste: 0 };
+    models.forEach(function(r) { if (counts.hasOwnProperty(r.fit_level)) counts[r.fit_level]++; });
+    var total = models.length;
+    var segments = [
+      { key: 'parfait', cls: 'fit-seg-parfait', color: 'var(--fit-parfait)', label: t('parfait') },
+      { key: 'bon', cls: 'fit-seg-bon', color: 'var(--fit-bon)', label: t('bon') },
+      { key: 'marginal', cls: 'fit-seg-marginal', color: 'var(--fit-marginal)', label: t('marginal') },
+      { key: 'trop_juste', cls: 'fit-seg-trop', color: 'var(--fit-trop)', label: t('trop_juste') }
+    ];
+    bar.innerHTML = segments.map(function(s) {
+      var pct = total > 0 ? (counts[s.key] / total * 100) : 0;
+      return '<div class="fit-seg ' + s.cls + '" style="width:' + pct.toFixed(1) + '%" title="' + escapeHtml(s.label) + ': ' + counts[s.key] + '"></div>';
+    }).join('');
+    legend.innerHTML = segments.map(function(s) {
+      return '<span><span class="dot" style="background:' + s.color + '"></span>' + escapeHtml(s.label) + ': ' + counts[s.key] + '</span>';
+    }).join('');
+  }
+
+  // ===== Score color function =====
+  function scoreColorClass(val) {
+    var n = parseFloat(val);
+    if (isNaN(n)) return '';
+    if (n >= 70) return 'score-green';
+    if (n >= 40) return 'score-yellow';
+    return 'score-red';
+  }
+
+  // ===== Compact mode =====
+  var isCompactMode = false;
+  function toggleCompactMode() {
+    isCompactMode = !isCompactMode;
+    var modelsCard = document.querySelector('.models.card');
+    if (modelsCard) modelsCard.classList.toggle('compact-mode', isCompactMode);
+    var btn = document.getElementById('btn-compact');
+    if (btn) btn.textContent = isCompactMode ? '⊞ Détaillé' : '⊟ Compact';
+  }
+
+  // ===== Custom profile badge =====
+  function updateCustomProfileBadge() {
+    var badge = document.getElementById('custom-profile-badge');
+    if (!badge) return;
+    badge.classList.toggle('visible', isCustomProfile);
+  }
+
+  // ===== Search autocomplete =====
+  function renderSearchAutocomplete(query) {
+    var list = document.getElementById('search-autocomplete-list');
+    var input = document.getElementById('search');
+    if (!list || !input) return;
+    if (!query || query.length < 1) {
+      list.classList.remove('open');
+      input.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    var q = query.toLowerCase();
+    var matches = [];
+    for (var i = 0; i < models.length && matches.length < 5; i++) {
+      var name = (models[i].model && models[i].model.name) || '';
+      if (name.toLowerCase().includes(q) && matches.indexOf(name) === -1) {
+        matches.push(name);
+      }
+    }
+    if (!matches.length) {
+      list.classList.remove('open');
+      input.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    list.innerHTML = matches.map(function(m, idx) {
+      return '<div class="search-autocomplete-item" role="option" data-value="' + escapeHtml(m) + '">' + escapeHtml(m) + '</div>';
+    }).join('');
+    list.classList.add('open');
+    input.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeAutocomplete() {
+    var list = document.getElementById('search-autocomplete-list');
+    var input = document.getElementById('search');
+    if (list) list.classList.remove('open');
+    if (input) input.setAttribute('aria-expanded', 'false');
+  }
+
+  // ===== Favorites system =====
+  var FAVORITES_KEY = 'df_modelfit_favorites_v1';
+  function loadFavorites() {
+    try {
+      var raw = localStorage.getItem(FAVORITES_KEY);
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { return []; }
+  }
+  function saveFavorites(favs) {
+    try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs)); } catch (_) {}
+  }
+  function toggleFavorite(modelName) {
+    var favs = loadFavorites();
+    var idx = favs.indexOf(modelName);
+    if (idx >= 0) favs.splice(idx, 1);
+    else favs.push(modelName);
+    saveFavorites(favs);
+    return favs;
+  }
+  function isFavorite(modelName) {
+    return loadFavorites().indexOf(modelName) >= 0;
+  }
+
+  // ===== Scroll-to-top button =====
+  function initScrollTopButton() {
+    var btn = document.getElementById('scroll-top-btn');
+    if (!btn) return;
+    window.addEventListener('scroll', function() {
+      btn.classList.toggle('visible', window.scrollY > 400);
+    });
+    btn.addEventListener('click', function() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  // ===== Row tooltip =====
+  var tooltipTimeout = null;
+  function initRowTooltip() {
+    var tooltip = document.getElementById('row-tooltip');
+    if (!tooltip || !el.modelsTbody) return;
+    el.modelsTbody.addEventListener('mouseover', function(e) {
+      var row = e.target.closest('tr[data-row-id]');
+      if (!row) return;
+      clearTimeout(tooltipTimeout);
+      var rowId = parseInt(row.getAttribute('data-row-id'), 10);
+      var data = models.find(function(m) { return (m._id ?? m.model.name) === rowId; });
+      if (!data) return;
+      var tps = data.estimated_tps != null ? data.estimated_tps + ' tok/s' : '—';
+      var eco = data.eco_level || '—';
+      var mem = data.mem_requise_gb != null ? data.mem_requise_gb + ' Go' : '—';
+      tooltip.textContent = 'tok/s: ' + tps + ' | Énergie: ' + eco + ' | Mém: ' + mem;
+      tooltip.classList.add('visible');
+      var rect = row.getBoundingClientRect();
+      tooltip.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+      tooltip.style.left = (rect.left + window.scrollX) + 'px';
+    });
+    el.modelsTbody.addEventListener('mouseout', function(e) {
+      var row = e.target.closest('tr[data-row-id]');
+      if (!row) return;
+      tooltipTimeout = setTimeout(function() {
+        tooltip.classList.remove('visible');
+      }, 150);
+    });
+  }
+
+  // ── Runtimes / Local AI management ─────────────────────────────────
+  var localModelsCache = [];
+  var localMatchedCache = {};
+
+  async function loadRuntimes() {
+    var statusEl = document.getElementById('runtimes-status');
+    if (!statusEl) return;
+    try {
+      var res = await fetch(API + '/runtimes');
+      if (!res.ok) throw new Error(res.statusText);
+      var data = await res.json();
+      renderRuntimesStatus(data.runtimes);
+      localModelsCache = data.local_models || [];
+      renderLocalModels(localModelsCache);
+      refreshLocalMatches();
+    } catch (err) {
+      statusEl.innerHTML = '<div class="runtime-card"><span class="runtime-card-name">Détection impossible</span><span class="runtime-card-error">' + escapeHtml(err.message) + '</span></div>';
+    }
+  }
+
+  function renderRuntimesStatus(runtimes) {
+    var statusEl = document.getElementById('runtimes-status');
+    if (!statusEl || !runtimes) return;
+    statusEl.innerHTML = runtimes.map(function(rt) {
+      var dotClass = rt.running ? 'running' : (rt.installed ? 'installed' : 'not-found');
+      var statusLabel = rt.running ? (currentLang === 'en' ? 'Running' : 'En cours') : (rt.installed ? (currentLang === 'en' ? 'Installed (stopped)' : 'Installé (arrêté)') : (currentLang === 'en' ? 'Not found' : 'Non trouvé'));
+      var versionText = rt.version ? 'v' + escapeHtml(rt.version) : '';
+      var modelsText = rt.running ? (rt.models_count + (currentLang === 'en' ? ' model(s)' : ' modèle(s)')) : '';
+      var metaParts = [statusLabel, versionText, modelsText].filter(Boolean).join(' · ');
+      var errorHtml = rt.error ? '<span class="runtime-card-error">' + escapeHtml(rt.error) + '</span>' : '';
+      return '<div class="runtime-card">' +
+        '<div class="runtime-card-header"><span class="runtime-card-name">' + escapeHtml(rt.name) + '</span><span class="runtime-status-dot ' + dotClass + '" title="' + escapeHtml(statusLabel) + '"></span></div>' +
+        '<span class="runtime-card-meta">' + escapeHtml(metaParts) + '</span>' +
+        errorHtml +
+        '</div>';
+    }).join('');
+  }
+
+  function renderLocalModels(models) {
+    var section = document.getElementById('local-models-section');
+    var tbody = document.getElementById('local-models-tbody');
+    var countEl = document.getElementById('local-models-count');
+    if (!section || !tbody) return;
+    if (!models || models.length === 0) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+    if (countEl) countEl.textContent = String(models.length);
+    tbody.innerHTML = models.map(function(m) {
+      var sizeText = m.size_gb != null ? m.size_gb + ' Go' : '—';
+      return '<tr>' +
+        '<td class="mono">' + escapeHtml(m.name) + '</td>' +
+        '<td>' + escapeHtml(m.runtime) + '</td>' +
+        '<td>' + escapeHtml(sizeText) + '</td>' +
+        '<td>' + escapeHtml(m.quantization || '—') + '</td>' +
+        '<td>' + escapeHtml(m.family || m.parameter_size || '—') + '</td>' +
+        '<td><div class="btn-action-group">' +
+          '<button type="button" class="btn-action" onclick="window._dfPullModel(\'' + escapeHtml(m.name) + '\')" title="Mettre à jour">🔄</button>' +
+          '<button type="button" class="btn-action btn-danger" onclick="window._dfDeleteModel(\'' + escapeHtml(m.name) + '\')" title="Supprimer">🗑️</button>' +
+        '</div></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  async function refreshLocalMatches() {
+    try {
+      var res = await fetch(API + '/runtimes/models');
+      if (!res.ok) return;
+      var data = await res.json();
+      localMatchedCache = data.matched || {};
+    } catch (_) {}
+  }
+
+  function isModelInstalledLocally(modelName) {
+    if (!modelName) return false;
+    if (localMatchedCache[modelName]) return true;
+    var lower = modelName.toLowerCase();
+    var short = lower.split('/').pop();
+    return localModelsCache.some(function(lm) {
+      var ln = lm.name.toLowerCase().split(':')[0];
+      return ln === short || lower.includes(ln) || ln.includes(short);
+    });
+  }
+
+  async function installModel(name) {
+    if (!name) return;
+    var progress = document.getElementById('install-progress');
+    var progressText = progress ? progress.querySelector('.install-progress-text') : null;
+    if (progress) progress.hidden = false;
+    if (progressText) progressText.textContent = (currentLang === 'en' ? 'Installing ' : 'Installation de ') + name + '…';
+    if (typeof showToast === 'function') showToast((currentLang === 'en' ? 'Installing ' : 'Installation de ') + name + '…', 'info');
+    try {
+      var res = await fetch(API + '/runtimes/install', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name}),
+      });
+      var data = await res.json();
+      if (data.ok) {
+        if (typeof showToast === 'function') showToast(data.message || (name + ' installé !'), 'success');
+        await loadRuntimes();
+      } else {
+        if (typeof showToast === 'function') showToast(data.message || 'Échec', 'error');
+      }
+    } catch (err) {
+      if (typeof showToast === 'function') showToast('Erreur : ' + (err.message || err), 'error');
+    } finally {
+      if (progress) progress.hidden = true;
+    }
+  }
+
+  async function deleteModel(name) {
+    if (!name) return;
+    var confirmMsg = currentLang === 'en'
+      ? 'Delete model "' + name + '" from Ollama?'
+      : 'Supprimer le modèle « ' + name + ' » d\'Ollama ?';
+    if (!confirm(confirmMsg)) return;
+    try {
+      var res = await fetch(API + '/runtimes/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name}),
+      });
+      var data = await res.json();
+      if (data.ok) {
+        if (typeof showToast === 'function') showToast(data.message || (name + ' supprimé.'), 'success');
+        await loadRuntimes();
+      } else {
+        if (typeof showToast === 'function') showToast(data.message || 'Échec', 'error');
+      }
+    } catch (err) {
+      if (typeof showToast === 'function') showToast('Erreur : ' + (err.message || err), 'error');
+    }
+  }
+
+  window._dfPullModel = function(n) { installModel(n); };
+  window._dfDeleteModel = function(n) { deleteModel(n); };
+
+  // ── Chat Panel ────────────────────────────────────────────────────
+  var CONVOS_KEY = 'df_modelfit_conversations_v2';
+  var chatConversations = [];
+  var currentConversationId = null;
+  var chatModels = [];
+  var chatPresets = {};
+  var chatOptions = {
+    temperature: 0.7, top_p: 0.9, top_k: 40,
+    num_predict: 2048, repeat_penalty: 1.1, num_ctx: 4096, seed: 0
+  };
+  var chatStreaming = false;
+  var chatAbortController = null;
+  var chatAttachedImage = null;
+  var chatLastStats = null;
+
+  function initChat() {
+    var panel = document.getElementById('chat-panel');
+    var toggle = document.getElementById('btn-chat-toggle');
+    var closeBtn = document.getElementById('btn-chat-close');
+    var form = document.getElementById('chat-input-form');
+    var input = document.getElementById('chat-input');
+    var modelSel = document.getElementById('chat-model-select');
+
+    if (toggle) toggle.addEventListener('click', function() {
+      if (panel) {
+        panel.classList.toggle('chat-panel-open');
+        if (panel.classList.contains('chat-panel-open')) {
+          loadChatModels();
+          if (input) input.focus();
+        }
+      }
+    });
+    if (closeBtn && panel) closeBtn.addEventListener('click', function() {
+      panel.classList.remove('chat-panel-open');
+    });
+
+    if (modelSel) modelSel.addEventListener('change', onModelChange);
+
+    if (form) form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      sendChatMessage();
+    });
+
+    if (input) {
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendChatMessage();
+        }
+      });
+      input.addEventListener('input', function() {
+        input.style.height = 'auto';
+        var maxH = parseFloat(getComputedStyle(input).lineHeight) * 6;
+        input.style.height = Math.min(input.scrollHeight, maxH) + 'px';
+        updateTokenEstimate();
+      });
+    }
+
+    var settingsBtn = document.getElementById('btn-chat-settings-toggle');
+    if (settingsBtn) settingsBtn.addEventListener('click', toggleSettings);
+
+    var resetBtn = document.getElementById('btn-chat-reset-defaults');
+    if (resetBtn) resetBtn.addEventListener('click', resetToModelDefaults);
+
+    var newBtn = document.getElementById('btn-chat-new');
+    if (newBtn) newBtn.addEventListener('click', newConversation);
+
+    var convosBtn = document.getElementById('btn-chat-convos-toggle');
+    if (convosBtn) convosBtn.addEventListener('click', function() {
+      var list = document.getElementById('chat-conversations-list');
+      if (list) list.classList.toggle('chat-convos-open');
+    });
+
+    var stopBtn = document.getElementById('btn-chat-stop');
+    if (stopBtn) stopBtn.addEventListener('click', stopGeneration);
+
+    var regenBtn = document.getElementById('btn-chat-regenerate');
+    if (regenBtn) regenBtn.addEventListener('click', regenerateLastResponse);
+
+    var screenshotBtn = document.getElementById('btn-chat-screenshot');
+    if (screenshotBtn) screenshotBtn.addEventListener('click', captureScreen);
+
+    var fileInput = document.getElementById('chat-file-input');
+    if (fileInput) fileInput.addEventListener('change', attachImage);
+
+    var removeImgBtn = document.getElementById('btn-chat-remove-image');
+    if (removeImgBtn) removeImgBtn.addEventListener('click', removeAttachedImage);
+
+    var presetSel = document.getElementById('chat-preset-select');
+    if (presetSel) presetSel.addEventListener('change', function() {
+      selectPreset(presetSel.value);
+    });
+
+    ['chat-temperature', 'chat-top-p', 'chat-repeat-penalty'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateSliderValues);
+    });
+
+    var dropZone = document.getElementById('chat-drop-zone');
+    var messagesEl = document.getElementById('chat-messages');
+    [dropZone, messagesEl].forEach(function(zone) {
+      if (!zone) return;
+      zone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        if (dropZone) dropZone.classList.add('drag-over');
+      });
+      zone.addEventListener('dragleave', function() {
+        if (dropZone) dropZone.classList.remove('drag-over');
+      });
+      zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (dropZone) dropZone.classList.remove('drag-over');
+        var files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files.length > 0) handleImageFile(files[0]);
+      });
+    });
+
+    loadConversations();
+    if (!chatConversations.length) newConversation();
+    else {
+      currentConversationId = chatConversations[0].id;
+      renderChatMessages();
+      renderConversationsList();
+    }
+    loadPresets();
+  }
+
+  function loadChatModels() {
+    var modelSel = document.getElementById('chat-model-select');
+    if (!modelSel) return;
+    fetch(API + '/chat/models')
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (!data.available) {
+          modelSel.innerHTML = '<option value="">' + escapeHtml(t('chatOllamaNotRunning')) + '</option>';
+          chatModels = [];
+          return;
+        }
+        chatModels = data.models || [];
+        if (!chatModels.length) {
+          modelSel.innerHTML = '<option value="">' + escapeHtml(t('chatNoModels')) + '</option>';
+          return;
+        }
+        var prev = modelSel.value;
+        var opts = '<option value="">' + escapeHtml(t('chatSelectModel')) + '</option>';
+        chatModels.forEach(function(m) {
+          var sizeTag = m.size_gb ? ' (' + m.size_gb + ' Go)' : '';
+          opts += '<option value="' + escapeHtml(m.name) + '">' +
+            escapeHtml(m.name) + sizeTag + '</option>';
+        });
+        modelSel.innerHTML = opts;
+        var conv = getCurrentConversation();
+        if (conv && conv.model) modelSel.value = conv.model;
+        else if (prev) modelSel.value = prev;
+        onModelChange();
+      })
+      .catch(function() {
+        modelSel.innerHTML = '<option value="">' + escapeHtml(t('chatOllamaNotRunning')) + '</option>';
+        chatModels = [];
+      });
+  }
+
+  function getSelectedModel() {
+    var found = null;
+    var modelSel = document.getElementById('chat-model-select');
+    if (!modelSel || !modelSel.value) return null;
+    chatModels.forEach(function(m) {
+      if (m.name === modelSel.value) found = m;
+    });
+    return found;
+  }
+
+  function onModelChange() {
+    var modelSel = document.getElementById('chat-model-select');
+    var input = document.getElementById('chat-input');
+    var sendBtn = document.getElementById('btn-chat-send');
+    var enabled = !!(modelSel && modelSel.value);
+    if (input) input.disabled = !enabled;
+    if (sendBtn) sendBtn.disabled = !enabled;
+
+    var m = getSelectedModel();
+    var badgesEl = document.getElementById('chat-model-badges');
+    var infoEl = document.getElementById('chat-model-info');
+    var imageZone = document.getElementById('chat-image-zone');
+
+    if (badgesEl) {
+      var badges = '';
+      if (m && m.supports_vision) badges += '<span class="chat-badge chat-badge-vision">👁️ Vision</span>';
+      if (m && m.supports_code) badges += '<span class="chat-badge chat-badge-code">💻 Code</span>';
+      badgesEl.innerHTML = badges;
+    }
+    if (infoEl) {
+      if (m) {
+        infoEl.textContent = (m.size_gb ? m.size_gb + ' Go' : '') +
+          (m.quantization ? ' · ' + m.quantization : '') +
+          (m.default_ctx ? ' · ctx ' + m.default_ctx : '');
+      } else {
+        infoEl.textContent = '';
+      }
+    }
+    if (imageZone) imageZone.hidden = !(m && m.supports_vision);
+
+    if (m && m.defaults) {
+      chatOptions.temperature = m.defaults.temperature;
+      chatOptions.top_p = m.defaults.top_p;
+      chatOptions.top_k = m.defaults.top_k;
+      chatOptions.num_predict = m.defaults.num_predict;
+      chatOptions.repeat_penalty = m.defaults.repeat_penalty;
+      chatOptions.num_ctx = m.defaults.num_ctx;
+      chatOptions.seed = m.defaults.seed;
+      applyOptionsToUI();
+      if (m.defaults.suggested_preset) {
+        var presetSel = document.getElementById('chat-preset-select');
+        if (presetSel) presetSel.value = m.defaults.suggested_preset;
+      }
+    }
+
+    var conv = getCurrentConversation();
+    if (conv && modelSel) conv.model = modelSel.value;
+    saveConversations();
+  }
+
+  function loadPresets() {
+    fetch(API + '/chat/presets')
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        chatPresets = data.presets || {};
+      })
+      .catch(function() { chatPresets = {}; });
+  }
+
+  function selectPreset(key) {
+    if (!chatPresets[key]) return;
+    var lang = currentLang === 'en' ? 'en' : 'fr';
+    var prompt = chatPresets[key][lang] || chatPresets[key].fr || '';
+    var ta = document.getElementById('chat-system-prompt');
+    if (ta) ta.value = prompt;
+  }
+
+  function getSystemPrompt() {
+    var ta = document.getElementById('chat-system-prompt');
+    if (ta && ta.value.trim()) return ta.value.trim();
+    var presetSel = document.getElementById('chat-preset-select');
+    var key = (presetSel && presetSel.value) || 'default';
+    if (chatPresets[key]) {
+      var lang = currentLang === 'en' ? 'en' : 'fr';
+      return chatPresets[key][lang] || chatPresets[key].fr || '';
+    }
+    if (currentLang === 'en') {
+      return 'You are a helpful AI assistant integrated into DF Modelfit.';
+    }
+    return 'Tu es un assistant IA intégré à DF Modelfit.';
+  }
+
+  function getCurrentConversation() {
+    var conv = null;
+    chatConversations.forEach(function(c) {
+      if (c.id === currentConversationId) conv = c;
+    });
+    return conv;
+  }
+
+  function sendChatMessage(existingConv) {
+    var input = document.getElementById('chat-input');
+    var modelSel = document.getElementById('chat-model-select');
+    if (!modelSel || chatStreaming) return;
+
+    var conv = existingConv || getCurrentConversation();
+
+    if (!existingConv) {
+      if (!input) return;
+      var text = input.value.trim();
+      if (!text && !chatAttachedImage) return;
+      var model = modelSel.value;
+      if (!model) return;
+
+      if (!conv) { newConversation(); conv = getCurrentConversation(); }
+
+      var userMsg = { role: 'user', content: text || '(image)' };
+      if (chatAttachedImage) {
+        userMsg.images = [chatAttachedImage];
+        userMsg._hasImage = true;
+      }
+      conv.messages.push(userMsg);
+      if (conv.messages.length === 1) {
+        conv.title = text.slice(0, 50) || 'Image';
+      }
+      conv.model = model;
+      renderChatMessages();
+      input.value = '';
+      input.style.height = 'auto';
+      removeAttachedImage();
+      updateTokenEstimate();
+    }
+
+    var model = modelSel.value || (conv && conv.model);
+    if (!model) return;
+
+    chatStreaming = true;
+    chatAbortController = new AbortController();
+    updateChatUI();
+
+    var systemPrompt = getSystemPrompt();
+    var messagesPayload = conv.messages.filter(function(m) {
+      return m.role === 'user' || m.role === 'assistant';
+    }).map(function(m) {
+      var entry = { role: m.role, content: m.content };
+      if (m.images) entry.images = m.images;
+      return entry;
+    });
+
+    var opts = {};
+    if (chatOptions.temperature !== undefined) opts.temperature = chatOptions.temperature;
+    if (chatOptions.top_p !== undefined) opts.top_p = chatOptions.top_p;
+    if (chatOptions.top_k !== undefined) opts.top_k = chatOptions.top_k;
+    if (chatOptions.num_predict !== undefined) opts.num_predict = chatOptions.num_predict;
+    if (chatOptions.repeat_penalty !== undefined) opts.repeat_penalty = chatOptions.repeat_penalty;
+    if (chatOptions.num_ctx !== undefined) opts.num_ctx = chatOptions.num_ctx;
+    if (chatOptions.seed && chatOptions.seed > 0) opts.seed = chatOptions.seed;
+
+    fetch(API + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: chatAbortController.signal,
+      body: JSON.stringify({
+        model: model,
+        messages: messagesPayload,
+        system_prompt: systemPrompt,
+        options: opts,
+      }),
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.body.getReader();
+    })
+    .then(function(reader) {
+      var decoder = new TextDecoder();
+      var assistantMsg = { role: 'assistant', content: '' };
+      conv.messages.push(assistantMsg);
+      chatLastStats = null;
+      renderChatMessages();
+
+      function read() {
+        return reader.read().then(function(result) {
+          if (result.done) {
+            chatStreaming = false;
+            chatAbortController = null;
+            updateChatUI();
+            saveConversations();
+            renderChatMessages();
+            return;
+          }
+          var text = decoder.decode(result.value, { stream: true });
+          var lines = text.split('\n');
+          lines.forEach(function(line) {
+            line = line.trim();
+            if (!line || line === 'data: [DONE]') return;
+            if (line.startsWith('data: ')) {
+              try {
+                var chunk = JSON.parse(line.slice(6));
+                if (chunk.error) {
+                  assistantMsg.content += '\n[' + t('chatError') + (chunk.detail || t('chatErrorUnknown')) + ']';
+                } else if (chunk.message && chunk.message.content) {
+                  assistantMsg.content += chunk.message.content;
+                }
+                if (chunk.done) {
+                  updateGenerationStats(chunk);
+                }
+                renderChatMessages();
+              } catch (_) {}
+            }
+          });
+          return read();
+        });
+      }
+      return read();
+    })
+    .catch(function(err) {
+      if (err.name === 'AbortError') {
+        chatStreaming = false;
+        chatAbortController = null;
+        updateChatUI();
+        renderChatMessages();
+        return;
+      }
+      conv.messages.push({
+        role: 'error',
+        content: t('chatError') + (err.message || t('chatErrorCheck')),
+      });
+      chatStreaming = false;
+      chatAbortController = null;
+      updateChatUI();
+      renderChatMessages();
+    });
+  }
+
+  function stopGeneration() {
+    if (chatAbortController) {
+      chatAbortController.abort();
+    }
+  }
+
+  function regenerateLastResponse() {
+    var conv = getCurrentConversation();
+    if (!conv || !conv.messages.length) return;
+    while (conv.messages.length > 0 && conv.messages[conv.messages.length - 1].role !== 'user') {
+      conv.messages.pop();
+    }
+    chatLastStats = null;
+    renderChatMessages();
+    if (conv.messages.length > 0) {
+      var input = document.getElementById('chat-input');
+      if (input) input.value = '';
+      sendChatMessage(conv);
+    }
+  }
+
+  function renderChatMessages() {
+    var container = document.getElementById('chat-messages');
+    if (!container) return;
+    var conv = getCurrentConversation();
+    var messages = conv ? conv.messages : [];
+
+    if (!messages.length) {
+      container.innerHTML =
+        '<div class="chat-welcome">' +
+          '<p><strong>' + escapeHtml(t('chatWelcomeTitle')) + '</strong></p>' +
+          '<p class="chat-welcome-sub">' + escapeHtml(t('chatWelcomeSub')) + '</p>' +
+        '</div>';
+      return;
+    }
+
+    var html = messages.map(function(msg, idx) {
+      if (msg.role === 'error') {
+        return '<div class="chat-bubble chat-bubble-error">' + escapeHtml(msg.content) + '</div>';
+      }
+      var cls = msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant';
+      var imgHtml = '';
+      if (msg._hasImage && msg.images && msg.images[0]) {
+        imgHtml = '<img class="chat-bubble-img" src="data:image/png;base64,' + msg.images[0] + '" alt="Image" />';
+      }
+      var contentHtml = msg.role === 'assistant'
+        ? formatMarkdown(msg.content)
+        : escapeHtml(msg.content);
+      var bubble = '<div class="chat-bubble ' + cls + '">' + imgHtml + contentHtml + '</div>';
+      if (msg.role === 'assistant' && idx === messages.length - 1 && chatLastStats && !chatStreaming) {
+        bubble += '<div class="chat-stats-pill">' + escapeHtml(chatLastStats) + '</div>';
+      }
+      return bubble;
+    }).join('');
+
+    if (chatStreaming) {
+      html += '<div class="chat-typing">' + escapeHtml(t('chatGenerating')) + '</div>';
+    }
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+    addCopyButtons();
+  }
+
+  function formatMarkdown(text) {
+    if (!text) return '';
+    var escaped = escapeHtml(text);
+    escaped = escaped.replace(/```(\w*)\n?([\s\S]*?)```/g, function(_, lang, code) {
+      return '<pre><code>' + code + '</code></pre>';
+    });
+    escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+    escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    var lines = escaped.split('\n');
+    var result = [];
+    var i = 0;
+    while (i < lines.length) {
+      var ulMatch = lines[i].match(/^[-*]\s+(.+)/);
+      if (ulMatch) {
+        var items = [];
+        while (i < lines.length && (ulMatch = lines[i].match(/^[-*]\s+(.+)/))) {
+          items.push('<li>' + ulMatch[1] + '</li>');
+          i++;
+        }
+        result.push('<ul>' + items.join('') + '</ul>');
+        continue;
+      }
+      var olMatch = lines[i].match(/^\d+\.\s+(.+)/);
+      if (olMatch) {
+        var items = [];
+        while (i < lines.length && (olMatch = lines[i].match(/^\d+\.\s+(.+)/))) {
+          items.push('<li>' + olMatch[1] + '</li>');
+          i++;
+        }
+        result.push('<ol>' + items.join('') + '</ol>');
+        continue;
+      }
+      result.push(lines[i]);
+      i++;
+    }
+    escaped = result.join('\n');
+    escaped = escaped.replace(/\n/g, '<br>');
+    return escaped;
+  }
+
+  function addCopyButtons() {
+    var pres = document.querySelectorAll('#chat-messages .chat-bubble-assistant pre');
+    pres.forEach(function(pre) {
+      if (pre.querySelector('.chat-code-copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'chat-code-copy-btn';
+      btn.textContent = t('chatCopy');
+      btn.type = 'button';
+      btn.addEventListener('click', function() {
+        var code = pre.querySelector('code');
+        var txt = code ? code.textContent : pre.textContent;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.textContent = t('chatCopied');
+          setTimeout(function() { btn.textContent = t('chatCopy'); }, 1500);
+        });
+      });
+      pre.style.position = 'relative';
+      pre.appendChild(btn);
+    });
+  }
+
+  function updateChatUI() {
+    var input = document.getElementById('chat-input');
+    var sendBtn = document.getElementById('btn-chat-send');
+    var stopBtn = document.getElementById('btn-chat-stop');
+    var regenBtn = document.getElementById('btn-chat-regenerate');
+
+    if (input) input.disabled = chatStreaming;
+    if (sendBtn) sendBtn.hidden = chatStreaming;
+    if (sendBtn) sendBtn.disabled = !document.getElementById('chat-model-select').value;
+    if (stopBtn) stopBtn.hidden = !chatStreaming;
+
+    var conv = getCurrentConversation();
+    var hasAssistant = conv && conv.messages.length > 0 &&
+      conv.messages[conv.messages.length - 1].role === 'assistant';
+    if (regenBtn) regenBtn.hidden = !hasAssistant || chatStreaming;
+  }
+
+  function updateGenerationStats(data) {
+    if (!data) return;
+    var totalDur = data.total_duration;
+    var evalCount = data.eval_count;
+    var evalDur = data.eval_duration;
+    if (evalCount && evalDur) {
+      var tps = (evalCount / (evalDur / 1e9)).toFixed(1);
+      var durMs = Math.round((totalDur || evalDur) / 1e6);
+      chatLastStats = tps + ' tok/s · ' + evalCount + ' tokens · ' + durMs + 'ms';
+    }
+  }
+
+  function updateTokenEstimate() {
+    var input = document.getElementById('chat-input');
+    var el = document.getElementById('chat-token-estimate');
+    if (!el || !input) return;
+    var text = input.value || '';
+    var est = Math.ceil(text.length / 4);
+    el.textContent = est > 0 ? '~' + est + ' tokens' : '';
+  }
+
+  function captureScreen() {
+    if (typeof html2canvas !== 'function') {
+      showToast('html2canvas non chargé', 'error');
+      return;
+    }
+    var chatPanel = document.getElementById('chat-panel');
+    if (chatPanel) chatPanel.style.visibility = 'hidden';
+
+    html2canvas(document.body, {
+      scale: 0.5, useCORS: true, logging: false,
+      windowWidth: document.body.scrollWidth,
+      windowHeight: document.body.scrollHeight,
+    }).then(function(canvas) {
+      if (chatPanel) chatPanel.style.visibility = '';
+      chatAttachedImage = canvas.toDataURL('image/png').split(',')[1];
+      showImagePreview();
+      showToast(t('chatScreenCaptured'), 'success');
+    }).catch(function(err) {
+      if (chatPanel) chatPanel.style.visibility = '';
+      showToast('Erreur capture : ' + err.message, 'error');
+    });
+  }
+
+  function attachImage() {
+    var fileInput = document.getElementById('chat-file-input');
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
+    handleImageFile(fileInput.files[0]);
+    fileInput.value = '';
+  }
+
+  function handleImageFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      chatAttachedImage = e.target.result.split(',')[1];
+      showImagePreview();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function detectImageMime(b64) {
+    if (!b64) return 'image/png';
+    if (b64.indexOf('/9j/') === 0 || b64.indexOf('/9j/') !== -1 && b64.indexOf('/9j/') < 4) return 'image/jpeg';
+    if (b64.indexOf('iVBOR') === 0) return 'image/png';
+    if (b64.indexOf('R0lGOD') === 0) return 'image/gif';
+    if (b64.indexOf('UklGR') === 0) return 'image/webp';
+    return 'image/png';
+  }
+
+  function showImagePreview() {
+    var preview = document.getElementById('chat-image-preview');
+    var img = document.getElementById('chat-preview-img');
+    if (preview) preview.hidden = false;
+    if (img && chatAttachedImage) {
+      var mime = detectImageMime(chatAttachedImage);
+      img.src = 'data:' + mime + ';base64,' + chatAttachedImage;
+    }
+  }
+
+  function removeAttachedImage() {
+    chatAttachedImage = null;
+    var preview = document.getElementById('chat-image-preview');
+    if (preview) preview.hidden = true;
+  }
+
+  function newConversation() {
+    var conv = {
+      id: 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      title: t('chatNewConv'),
+      messages: [],
+      createdAt: new Date().toISOString(),
+      model: ''
+    };
+    chatConversations.unshift(conv);
+    currentConversationId = conv.id;
+    chatLastStats = null;
+    saveConversations();
+    renderChatMessages();
+    renderConversationsList();
+    var input = document.getElementById('chat-input');
+    if (input) input.focus();
+  }
+
+  function switchConversation(id) {
+    currentConversationId = id;
+    chatLastStats = null;
+    renderChatMessages();
+    renderConversationsList();
+    var conv = getCurrentConversation();
+    if (conv && conv.model) {
+      var modelSel = document.getElementById('chat-model-select');
+      if (modelSel) modelSel.value = conv.model;
+      onModelChange();
+    }
+    updateChatUI();
+  }
+
+  function deleteConversation(id) {
+    chatConversations = chatConversations.filter(function(c) { return c.id !== id; });
+    if (currentConversationId === id) {
+      if (chatConversations.length > 0) {
+        currentConversationId = chatConversations[0].id;
+      } else {
+        newConversation();
+        return;
+      }
+    }
+    chatLastStats = null;
+    saveConversations();
+    renderChatMessages();
+    renderConversationsList();
+    updateChatUI();
+  }
+
+  function renderConversationsList() {
+    var list = document.getElementById('chat-conversations-list');
+    if (!list) return;
+    if (!chatConversations.length) {
+      list.innerHTML = '<div style="padding:0.5rem 1rem;font-size:0.8rem;color:var(--text-muted)">' + escapeHtml(t('chatNoConversations')) + '</div>';
+      return;
+    }
+    list.innerHTML = chatConversations.map(function(c) {
+      var d = new Date(c.createdAt);
+      var dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      var activeClass = c.id === currentConversationId ? ' active' : '';
+      return '<div class="chat-convo-item' + activeClass + '" data-convo-id="' + c.id + '">' +
+        '<span class="chat-convo-date">' + escapeHtml(dateStr) + '</span>' +
+        '<span class="chat-convo-title">' + escapeHtml(c.title) + '</span>' +
+        '<button type="button" class="chat-convo-delete" data-delete-id="' + c.id + '" title="' + escapeHtml(t('chatDeleteConv')) + '">🗑️</button>' +
+        '</div>';
+    }).join('');
+
+    list.querySelectorAll('.chat-convo-item').forEach(function(item) {
+      item.addEventListener('click', function(e) {
+        if (e.target.classList.contains('chat-convo-delete')) return;
+        switchConversation(item.getAttribute('data-convo-id'));
+      });
+    });
+    list.querySelectorAll('.chat-convo-delete').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        deleteConversation(btn.getAttribute('data-delete-id'));
+      });
+    });
+  }
+
+  function saveConversations() {
+    try {
+      var toSave = chatConversations.map(function(c) {
+        var msgs = c.messages.slice(-20);
+        var lastImageIdx = -1;
+        for (var i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].images && msgs[i].images.length > 0) {
+            lastImageIdx = i;
+            break;
+          }
+        }
+        return {
+          id: c.id, title: c.title, createdAt: c.createdAt, model: c.model,
+          messages: msgs.map(function(m, idx) {
+            var entry = { role: m.role, content: m.content };
+            if (m._hasImage) entry._hasImage = true;
+            if (m.images && m.images.length > 0 && idx === lastImageIdx) {
+              entry.images = m.images;
+            }
+            return entry;
+          })
+        };
+      }).slice(0, 50);
+      localStorage.setItem(CONVOS_KEY, JSON.stringify(toSave));
+    } catch (_) {}
+  }
+
+  function loadConversations() {
+    try {
+      var raw = localStorage.getItem(CONVOS_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) chatConversations = parsed;
+      }
+    } catch (_) {
+      chatConversations = [];
+    }
+  }
+
+  function toggleSettings() {
+    var drawer = document.getElementById('chat-settings-drawer');
+    if (drawer) drawer.classList.toggle('chat-settings-open');
+  }
+
+  function resetToModelDefaults() {
+    var m = getSelectedModel();
+    if (m && m.defaults) {
+      chatOptions.temperature = m.defaults.temperature;
+      chatOptions.top_p = m.defaults.top_p;
+      chatOptions.top_k = m.defaults.top_k;
+      chatOptions.num_predict = m.defaults.num_predict;
+      chatOptions.repeat_penalty = m.defaults.repeat_penalty;
+      chatOptions.num_ctx = m.defaults.num_ctx;
+      chatOptions.seed = m.defaults.seed;
+    } else {
+      chatOptions = {
+        temperature: 0.7, top_p: 0.9, top_k: 40,
+        num_predict: 2048, repeat_penalty: 1.1, num_ctx: 4096, seed: 0
+      };
+    }
+    applyOptionsToUI();
+    showToast(t('chatResetDone'), 'success');
+  }
+
+  function applyOptionsToUI() {
+    var el;
+    el = document.getElementById('chat-temperature');
+    if (el) el.value = chatOptions.temperature;
+    el = document.getElementById('chat-top-p');
+    if (el) el.value = chatOptions.top_p;
+    el = document.getElementById('chat-top-k');
+    if (el) el.value = chatOptions.top_k;
+    el = document.getElementById('chat-num-predict');
+    if (el) el.value = chatOptions.num_predict;
+    el = document.getElementById('chat-num-ctx');
+    if (el) el.value = chatOptions.num_ctx;
+    el = document.getElementById('chat-repeat-penalty');
+    if (el) el.value = chatOptions.repeat_penalty;
+    el = document.getElementById('chat-seed');
+    if (el) el.value = chatOptions.seed;
+    updateSliderValues();
+  }
+
+  function updateSliderValues() {
+    var temp = document.getElementById('chat-temperature');
+    var tempVal = document.getElementById('chat-temp-val');
+    if (temp && tempVal) {
+      tempVal.textContent = parseFloat(temp.value).toFixed(1);
+      chatOptions.temperature = parseFloat(temp.value);
+    }
+    var topp = document.getElementById('chat-top-p');
+    var toppVal = document.getElementById('chat-topp-val');
+    if (topp && toppVal) {
+      toppVal.textContent = parseFloat(topp.value).toFixed(2);
+      chatOptions.top_p = parseFloat(topp.value);
+    }
+    var rp = document.getElementById('chat-repeat-penalty');
+    var rpVal = document.getElementById('chat-repeat-val');
+    if (rp && rpVal) {
+      rpVal.textContent = parseFloat(rp.value).toFixed(2);
+      chatOptions.repeat_penalty = parseFloat(rp.value);
+    }
+    var topk = document.getElementById('chat-top-k');
+    if (topk) chatOptions.top_k = parseInt(topk.value) || 40;
+    var np = document.getElementById('chat-num-predict');
+    if (np) chatOptions.num_predict = parseInt(np.value) || 2048;
+    var nc = document.getElementById('chat-num-ctx');
+    if (nc) chatOptions.num_ctx = parseInt(nc.value) || 4096;
+    var seed = document.getElementById('chat-seed');
+    if (seed) chatOptions.seed = parseInt(seed.value) || 0;
+  }
+
+  function initRuntimes() {
+    var btnRefresh = document.getElementById('btn-refresh-runtimes');
+    if (btnRefresh) btnRefresh.addEventListener('click', loadRuntimes);
+
+    var btnInstall = document.getElementById('btn-install-model');
+    var inputModel = document.getElementById('install-model-name');
+    if (btnInstall && inputModel) {
+      btnInstall.addEventListener('click', function() {
+        var name = inputModel.value.trim();
+        if (name) installModel(name);
+      });
+      inputModel.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          var name = inputModel.value.trim();
+          if (name) installModel(name);
+        }
+      });
+    }
+
+    document.querySelectorAll('.install-suggestion').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var model = btn.getAttribute('data-model');
+        if (inputModel) inputModel.value = model;
+        if (model) installModel(model);
+      });
+    });
+
+    loadRuntimes();
   }
 
   function init() {
@@ -1331,11 +2589,11 @@
             el.btnHf.textContent = t("updateModels");
           } else {
             el.btnHf.textContent = t("updateModels");
-            alert(data.message || t("errorUpdateFail"));
+            showToast(data.message || t("errorUpdateFail"), "error");
           }
         } catch (err) {
           el.btnHf.textContent = t("updateModels");
-          alert(t("errorNetwork") + "\n\n" + (err.message || err));
+          showToast(t("errorNetwork"), "error");
         } finally {
           el.btnHf.disabled = false;
           if (el.btnHf.textContent === t("loadingShort")) el.btnHf.textContent = t("updateModels");
@@ -1451,14 +2709,71 @@
       });
     }
 
-    if (el.btnExportCsv) el.btnExportCsv.addEventListener("click", function() { exportFile("csv"); });
-    if (el.btnExportJson) el.btnExportJson.addEventListener("click", function() { exportFile("json"); });
+    if (el.btnExportCsv) el.btnExportCsv.addEventListener("click", function() { exportFileWithFeedback("csv", el.btnExportCsv); });
+    if (el.btnExportJson) el.btnExportJson.addEventListener("click", function() { exportFileWithFeedback("json", el.btnExportJson); });
 
     if (el.btnToggleCustom) el.btnToggleCustom.addEventListener("click", toggleCustomProfile);
     if (el.btnApplyCustom) el.btnApplyCustom.addEventListener("click", applyCustomProfile);
     if (el.btnResetCustom) el.btnResetCustom.addEventListener("click", resetCustomProfile);
 
+    // Compact mode toggle
+    var btnCompact = document.getElementById('btn-compact');
+    if (btnCompact) btnCompact.addEventListener('click', toggleCompactMode);
+
+    // Search autocomplete
+    if (el.search) {
+      el.search.addEventListener('input', function() {
+        renderSearchAutocomplete(el.search.value.trim());
+      });
+      el.search.addEventListener('blur', function() {
+        setTimeout(closeAutocomplete, 200);
+      });
+    }
+    var acList = document.getElementById('search-autocomplete-list');
+    if (acList) {
+      acList.addEventListener('mousedown', function(e) {
+        var item = e.target.closest('.search-autocomplete-item');
+        if (!item) return;
+        var val = item.getAttribute('data-value');
+        if (val && el.search) {
+          el.search.value = val;
+          closeAutocomplete();
+          applyFilters();
+          saveSettings();
+        }
+      });
+    }
+
+    // Favorites click handling
+    if (el.modelsTbody) {
+      el.modelsTbody.addEventListener('click', function(e) {
+        var star = e.target.closest('.fav-star');
+        if (!star) return;
+        e.stopPropagation();
+        var modelName = star.getAttribute('data-fav-model');
+        if (!modelName) return;
+        toggleFavorite(modelName);
+        var active = isFavorite(modelName);
+        star.classList.toggle('fav-active', active);
+        star.textContent = active ? '★' : '☆';
+      });
+    }
+
+    // ARIA: set aria-busy on tbody during loading
+    if (el.modelsTbody) el.modelsTbody.setAttribute('aria-busy', 'true');
+
+    // Scroll-to-top button
+    initScrollTopButton();
+
+    // Row tooltip
+    initRowTooltip();
+
+    // Custom profile badge
+    updateCustomProfileBadge();
+
     loadChangelog();
+    initRuntimes();
+    initChat();
   }
 
   function renderSelectionState() {
@@ -1577,7 +2892,7 @@
           plugins: {
             legend: {
               labels: {
-                color: "#e4e4e7",
+                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e4e4e7',
               },
             },
           },
