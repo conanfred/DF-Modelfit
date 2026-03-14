@@ -6,6 +6,7 @@
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/Maintained%3F-oui-green" alt="Maintained">
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributions-bienvenues-brightgreen" alt="Contributions welcome"></a>
+  <a href="https://opentimestamps.org/"><img src="https://img.shields.io/badge/OpenTimestamps-Preuve%20d%27existence-2F7ED8" alt="OpenTimestamps"></a>
 </p>
 Application web en français pour estimer quels modèles LLM sont adaptés à votre machine (RAM, CPU, GPU) et les comparer selon plusieurs critères.
 
@@ -136,6 +137,7 @@ Dans l’application, lien « Voir la licence » : `http://localhost:5050/licens
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/Maintained%3F-yes-green" alt="Maintained">
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributions-welcome-brightgreen" alt="Contributions welcome"></a>
+  <a href="https://opentimestamps.org/"><img src="https://img.shields.io/badge/OpenTimestamps-Proof%20of%20existence-2F7ED8" alt="OpenTimestamps"></a>
 </p>
 
 Personal LLM model recommendation tool. Web app to estimate which LLM models fit your machine (RAM, CPU, GPU) and compare them.
