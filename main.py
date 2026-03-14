@@ -29,6 +29,10 @@ from api.runtimes import (
     ollama_model_info,
     ollama_running_models,
 )
+from api.professions import (
+    get_all_professions,
+    recommend_for_profession,
+)
 from api.chat import (
     ollama_chat_stream,
     ollama_is_available,
@@ -711,6 +715,41 @@ def api_runtimes_model_info(name: str):
     if info is None:
         raise HTTPException(404, f"Modèle {name} non trouvé.")
     return info
+
+
+# ---------------------------------------------------------------------------
+# Profession-based recommendation endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/professions")
+def api_professions(lang: str = "fr"):
+    """Liste les professions disponibles."""
+    return {"professions": get_all_professions(lang)}
+
+
+@app.get("/api/recommend/by-profession")
+def api_recommend_by_profession(
+    profession: str = Query(..., description="ID de la profession"),
+    lang: str = "fr",
+    limit: int = Query(10, ge=1, le=50),
+):
+    """Recommande les modèles adaptés à une profession."""
+    system = detect()
+    last = _read_last_updated()
+    all_fits = []
+    for m in MODELS:
+        try:
+            f = analyser(m, system)
+            d = to_dict(f)
+            d["status"] = _model_status(m, last)
+            all_fits.append(d)
+        except Exception:
+            continue
+    result = recommend_for_profession(profession, all_fits, limit, lang)
+    result["system"] = api_system()
+    if last:
+        result["last_updated"] = last
+    return result
 
 
 # ---------------------------------------------------------------------------

@@ -196,6 +196,43 @@ class TestRuntimesEndpoints:
         assert resp.status_code == 422
 
 
+class TestProfessionsEndpoints:
+    def test_professions_list(self):
+        resp = client.get("/api/professions")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "professions" in data
+        assert len(data["professions"]) >= 10
+
+    def test_professions_list_en(self):
+        resp = client.get("/api/professions?lang=en")
+        assert resp.status_code == 200
+        data = resp.json()
+        dev = next(
+            p for p in data["professions"] if p["id"] == "developer"
+        )
+        assert "Developer" in dev["name"]
+
+    def test_recommend_by_profession(self):
+        resp = client.get(
+            "/api/recommend/by-profession?profession=developer"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "profession" in data
+        assert "models" in data
+        assert "tips" in data
+        assert data["profession"]["id"] == "developer"
+
+    def test_recommend_unknown_profession(self):
+        resp = client.get(
+            "/api/recommend/by-profession?profession=unknown"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data.get("error") is True
+
+
 class TestChatEndpoints:
     def test_chat_models(self):
         resp = client.get("/api/chat/models")

@@ -72,6 +72,21 @@
       </div>
     </section>
 
+    <section class="professions card" id="professions-card">
+      <div class="professions-header-row">
+        <h2 data-i18n="professionsTitle">Quel est votre métier ?</h2>
+        <button type="button" id="btn-professions-close" class="btn btn-secondary btn-small" data-i18n="professionsClose" hidden>✕ Fermer</button>
+      </div>
+      <p class="professions-help" data-i18n="professionsHelp">Sélectionnez votre métier pour obtenir des recommandations de modèles IA personnalisées.</p>
+      <div id="professions-grid" class="professions-grid"></div>
+      <div id="profession-result" class="profession-result" hidden>
+        <div id="profession-result-header" class="profession-result-header"></div>
+        <div id="profession-tips" class="profession-tips"></div>
+        <div id="profession-settings" class="profession-settings"></div>
+        <div id="profession-models" class="profession-models-list"></div>
+      </div>
+    </section>
+
     <section class="filters card">
       <form id="filters-form" class="filters-form" role="search" data-i18n-aria-label="filtersFormAriaLabel" aria-label="Filtres des modèles">
       <div class="filters-row">

@@ -170,6 +170,9 @@
       scenarioReasoningLabel: "Reasoning profond",
       scenarioEdgeLabel: "Edge / léger",
       scenarioCustomLabel: "Personnalisé",
+      professionsTitle: "Quel est votre métier ?",
+      professionsHelp: "Sélectionnez votre métier pour obtenir des recommandations de modèles IA personnalisées.",
+      professionsClose: "✕ Fermer",
       runtimesTitle: "IA locales installées",
       runtimesHelp: "Détection automatique des runtimes IA (Ollama, LM Studio, llama.cpp). Gérez vos modèles locaux : installer, mettre à jour ou supprimer.",
       localModelsTitle: "Modèles installés localement",
@@ -355,6 +358,9 @@
       scenarioReasoningLabel: "Deep reasoning",
       scenarioEdgeLabel: "Edge / light",
       scenarioCustomLabel: "Custom",
+      professionsTitle: "What is your profession?",
+      professionsHelp: "Select your profession to get personalized AI model recommendations.",
+      professionsClose: "✕ Close",
       runtimesTitle: "Local AI runtimes",
       runtimesHelp: "Auto-detection of AI runtimes (Ollama, LM Studio, llama.cpp). Manage your local models: install, update, or delete.",
       localModelsTitle: "Locally installed models",
@@ -2446,6 +2452,154 @@
     if (seed) chatOptions.seed = parseInt(seed.value) || 0;
   }
 
+  // ── Professions / Métiers ──────────────────────────────────────────
+  var currentProfessionId = null;
+
+  function initProfessions() {
+    loadProfessions();
+    var closeBtn = document.getElementById('btn-professions-close');
+    if (closeBtn) closeBtn.addEventListener('click', closeProfessionResult);
+  }
+
+  function loadProfessions() {
+    var grid = document.getElementById('professions-grid');
+    if (!grid) return;
+    var lang = currentLang || 'fr';
+    fetch(API + '/professions?lang=' + lang)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = data.professions || [];
+        grid.innerHTML = list.map(function(p) {
+          return '<div class="profession-card" data-profession="' + escapeHtml(p.id) + '">' +
+            '<span class="profession-card-icon">' + p.icon + '</span>' +
+            '<span class="profession-card-name">' + escapeHtml(p.name) + '</span>' +
+            '<span class="profession-card-desc">' + escapeHtml(p.description) + '</span>' +
+          '</div>';
+        }).join('');
+        grid.querySelectorAll('.profession-card').forEach(function(card) {
+          card.addEventListener('click', function() {
+            var pid = card.getAttribute('data-profession');
+            selectProfession(pid);
+          });
+        });
+      })
+      .catch(function() {});
+  }
+
+  function selectProfession(pid) {
+    currentProfessionId = pid;
+    var grid = document.getElementById('professions-grid');
+    if (grid) {
+      grid.querySelectorAll('.profession-card').forEach(function(c) {
+        c.classList.toggle('active', c.getAttribute('data-profession') === pid);
+      });
+    }
+    var closeBtn = document.getElementById('btn-professions-close');
+    if (closeBtn) closeBtn.hidden = false;
+    var lang = currentLang || 'fr';
+    fetch(API + '/recommend/by-profession?profession=' + encodeURIComponent(pid) + '&lang=' + lang + '&limit=10')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          if (typeof showToast === 'function') showToast(data.message, 'error');
+          return;
+        }
+        renderProfessionResult(data);
+      })
+      .catch(function(err) {
+        if (typeof showToast === 'function') showToast(err.message, 'error');
+      });
+  }
+
+  function renderProfessionResult(data) {
+    var resultEl = document.getElementById('profession-result');
+    if (!resultEl) return;
+    resultEl.hidden = false;
+
+    var p = data.profession;
+    var headerEl = document.getElementById('profession-result-header');
+    if (headerEl) {
+      headerEl.innerHTML =
+        '<span class="profession-result-icon">' + p.icon + '</span>' +
+        '<div class="profession-result-info">' +
+          '<div class="profession-result-name">' + escapeHtml(p.name) + '</div>' +
+          '<div class="profession-result-desc">' + escapeHtml(p.description) + '</div>' +
+        '</div>';
+    }
+
+    var tipsEl = document.getElementById('profession-tips');
+    if (tipsEl && data.tips) {
+      tipsEl.innerHTML = data.tips.map(function(tip) {
+        return '<div class="profession-tip"><span class="profession-tip-icon">💡</span>' + escapeHtml(tip) + '</div>';
+      }).join('');
+    }
+
+    var settingsEl = document.getElementById('profession-settings');
+    if (settingsEl && data.settings) {
+      var s = data.settings;
+      var pills = [];
+      if (s.min_context) pills.push('📏 Contexte ≥ ' + (s.min_context / 1024) + 'K');
+      if (s.max_params_b) pills.push('📦 Max ' + s.max_params_b + 'B params');
+      if (s.prefer_code) pills.push('💻 Code');
+      if (s.prefer_vision) pills.push('👁️ Vision');
+      if (s.suggested_temperature != null) pills.push('🌡️ Temp. ' + s.suggested_temperature);
+      settingsEl.innerHTML = pills.map(function(p) {
+        return '<span class="profession-setting-pill">' + p + '</span>';
+      }).join('');
+    }
+
+    var modelsEl = document.getElementById('profession-models');
+    if (modelsEl && data.models) {
+      modelsEl.innerHTML = data.models.map(function(m, idx) {
+        var model = m.model || {};
+        var name = model.name || '?';
+        var provider = model.provider || '?';
+        var params = model.parameter_count || '?';
+        var ctx = model.context_length ? (model.context_length / 1024) + 'K' : '?';
+        var score = m.profession_score || 0;
+        var fitLabel = m.fit_level || '?';
+        var memGb = m.mem_requise_gb || '?';
+        var tps = m.estimated_tps || '?';
+        var scoreClass = score >= 70 ? 'score-excellent' : score >= 50 ? 'score-good' : score >= 30 ? 'score-medium' : 'score-low';
+        var hfLink = name !== '?' ? 'https://huggingface.co/' + encodeURI(name) : '#';
+        return '<div class="profession-model-card">' +
+          '<div class="profession-model-rank">#' + (idx + 1) + '</div>' +
+          '<div class="profession-model-info">' +
+            '<div class="profession-model-name"><a href="' + escapeHtml(hfLink) + '" target="_blank" rel="noopener">' + escapeHtml(name) + '</a></div>' +
+            '<div class="profession-model-meta">' +
+              '<span>' + escapeHtml(provider) + '</span>' +
+              '<span>' + escapeHtml(params) + '</span>' +
+              '<span>Ctx ' + escapeHtml(String(ctx)) + '</span>' +
+              '<span>Fit: ' + escapeHtml(fitLabel) + '</span>' +
+              '<span>' + escapeHtml(String(memGb)) + ' Go</span>' +
+              '<span>' + escapeHtml(String(tps)) + ' tok/s</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="profession-model-score">' +
+            '<div class="profession-model-score-value ' + scoreClass + '">' + score + '</div>' +
+            '<div class="profession-model-score-label">score</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function closeProfessionResult() {
+    var resultEl = document.getElementById('profession-result');
+    if (resultEl) resultEl.hidden = true;
+    var closeBtn = document.getElementById('btn-professions-close');
+    if (closeBtn) closeBtn.hidden = true;
+    currentProfessionId = null;
+    var grid = document.getElementById('professions-grid');
+    if (grid) {
+      grid.querySelectorAll('.profession-card').forEach(function(c) {
+        c.classList.remove('active');
+      });
+    }
+  }
+
   function initRuntimes() {
     var btnRefresh = document.getElementById('btn-refresh-runtimes');
     if (btnRefresh) btnRefresh.addEventListener('click', loadRuntimes);
@@ -2772,6 +2926,7 @@
     updateCustomProfileBadge();
 
     loadChangelog();
+    initProfessions();
     initRuntimes();
     initChat();
   }
