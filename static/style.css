@@ -1151,6 +1151,201 @@ body,
   font-size: 0.8rem;
 }
 
+/* Professions / Métiers */
+.professions-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.professions-header-row h2 { margin: 0; }
+.professions-help {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 1rem 0;
+}
+
+.professions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+
+.profession-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.profession-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.15);
+}
+.profession-card.active {
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.1);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.profession-card-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.profession-card-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+.profession-card-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.profession-result {
+  margin-top: 1.25rem;
+  animation: fadeIn 0.3s ease;
+}
+.profession-result[hidden] { display: none; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.profession-result-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+.profession-result-icon { font-size: 1.8rem; }
+.profession-result-info { flex: 1; }
+.profession-result-name { font-weight: 700; font-size: 1.05rem; }
+.profession-result-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.profession-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+.profession-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding: 0.35rem 0.6rem;
+  background: var(--surface2);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent);
+}
+.profession-tip-icon { flex-shrink: 0; }
+
+.profession-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.profession-setting-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.78rem;
+  color: var(--text);
+}
+
+.profession-models-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.profession-model-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: border-color 0.15s;
+}
+.profession-model-card:hover {
+  border-color: var(--accent);
+}
+.profession-model-rank {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 2rem;
+  text-align: center;
+}
+.profession-model-info { flex: 1; min-width: 0; }
+.profession-model-name {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profession-model-name a {
+  color: var(--link);
+  text-decoration: none;
+}
+.profession-model-name a:hover { text-decoration: underline; }
+.profession-model-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+.profession-model-score {
+  text-align: right;
+  min-width: 4rem;
+}
+.profession-model-score-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.profession-model-score-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.score-excellent { color: var(--fit-parfait); }
+.score-good { color: var(--fit-bon); }
+.score-medium { color: var(--fit-marginal); }
+.score-low { color: var(--fit-trop); }
+
+@media (max-width: 480px) {
+  .professions-grid { grid-template-columns: repeat(2, 1fr); }
+  .profession-card { padding: 0.75rem 0.5rem; }
+  .profession-card-icon { font-size: 1.5rem; }
+}
+
 /* Runtimes / IA locales */
 .runtimes-header-row {
   display: flex;
