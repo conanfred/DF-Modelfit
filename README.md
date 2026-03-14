@@ -8,9 +8,11 @@ Application web en français pour estimer quels modèles LLM sont adaptés à vo
 
 ## Démo
 
-**[Voir la démo vidéo (DEMO.mp4)](DEMO.mp4)**
+Sur GitHub, la vidéo ne s’affiche pas inline ; l’image ci‑dessous est cliquable et ouvre la vidéo.
 
-<video src="DEMO.mp4" controls width="100%" style="max-width: 720px;"></video>
+[![Voir la démo vidéo](assets/demo-poster.svg)](DEMO.mp4)
+
+*(Cliquez sur l’image pour ouvrir [DEMO.mp4](DEMO.mp4))*
 
 ## Fonctionnalités
 
@@ -128,9 +130,11 @@ Personal LLM model recommendation tool. Web app to estimate which LLM models fit
 
 ## Demo
 
-**[Watch demo video (DEMO.mp4)](DEMO.mp4)**
+On GitHub the video does not display inline; the image below is clickable and opens the video.
 
-<video src="DEMO.mp4" controls width="100%" style="max-width: 720px;"></video>
+[![Watch demo video](assets/demo-poster.svg)](DEMO.mp4)
+
+*(Click the image to open [DEMO.mp4](DEMO.mp4))*
 
 ## Features
 

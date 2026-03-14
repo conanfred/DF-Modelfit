@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="400" height="220">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#18181c"/>
+      <stop offset="100%" style="stop-color:#2e2e36"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="220" rx="12" fill="url(#bg)" stroke="#7c3aed" stroke-width="2"/>
+  <circle cx="200" cy="110" r="50" fill="rgba(124,58,237,0.3)" stroke="#7c3aed" stroke-width="3"/>
+  <polygon points="185,90 185,130 225,110" fill="#7c3aed"/>
+  <text x="200" y="175" text-anchor="middle" fill="#e4e4e7" font-family="system-ui,sans-serif" font-size="16" font-weight="600">Voir la d�mo vid�o (DEMO.mp4)</text>
+  <text x="200" y="195" text-anchor="middle" fill="#a1a1aa" font-family="system-ui,sans-serif" font-size="12">Cliquez pour lire</text>
+</svg>
