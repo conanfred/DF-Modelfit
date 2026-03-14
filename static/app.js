@@ -2,7 +2,7 @@
   const API = "/api";
   const PAGE_SIZE = 100;
   /** URL du lien de soutien financier à la recherche. */
-  const SUPPORT_URL = "https://paypal.me/conanfredleseul";
+  const SUPPORT_URL = "https://www.paypal.me/conanfredleseul";
   let system = null;
   let models = [];
   let currentPage = 0;
