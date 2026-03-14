@@ -602,8 +602,9 @@
         const providerLink = orgSlug ? `<a href="${escapeHtml("https://huggingface.co/" + encodeURI(orgSlug))}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(t("openOrgOnHf"))}">${escapeHtml(provider)}</a>` : escapeHtml(provider);
         const rowId = typeof row._id === "number" ? row._id : idx;
         const checked = selectedModels.some((s) => (s._id ?? s.model.name) === (row._id ?? row.model.name));
+        var favActive = isFavorite(name);
         return `<tr class="selectable-row${checked ? " row-selected" : ""}" data-row-id="${rowId}">
-          <td><input type="checkbox" class="model-select" data-row-id="${rowId}" ${checked ? "checked" : ""} aria-label="Sélectionner ce modèle pour la comparaison"></td>
+          <td><input type="checkbox" class="model-select" data-row-id="${rowId}" ${checked ? "checked" : ""} aria-label="${escapeHtml(t("selectForCompare"))}"> <button type="button" class="fav-star${favActive ? " fav-active" : ""}" data-fav-model="${escapeHtml(name)}" aria-label="Favori" title="Favori">${favActive ? "★" : "☆"}</button></td>
           <td><span class="fit-badge ${fitClass(row.fit_level)}">${escapeHtml(fitLabel)}</span></td>
           <td class="status-cell">${statusHtml}</td>
           <td class="mono">${modelLink}</td>
@@ -907,7 +908,9 @@
     if (data.last_updated) setLastUpdateText(data.last_updated);
     else if (system && system.models_last_updated) setLastUpdateText(system.models_last_updated);
     else setLastUpdateText(null);
+    if (el.modelsTbody) el.modelsTbody.setAttribute('aria-busy', 'false');
     selectedModels = [];
+    renderFitDistribution();
     applyFilters();
   }
 
@@ -1146,7 +1149,8 @@
       selectedModels.forEach(function(row) {
         let val = row[m.key];
         if (val == null && row.model) val = row.model[m.key];
-        html += "<td>" + escapeHtml(String(val != null ? val : "—")) + "</td>";
+        var cls = m.key === 'score' ? scoreColorClass(val) : '';
+        html += "<td" + (cls ? " class='" + cls + "'" : "") + ">" + escapeHtml(String(val != null ? val : "—")) + "</td>";
       });
       html += "</tr>";
     });
@@ -1179,14 +1183,16 @@
       if (!res.ok) throw new Error(res.statusText);
       const data = await res.json();
       isCustomProfile = true;
+      updateCustomProfileBadge();
       applyApiResponse(data);
     } catch (err) {
-      alert("Erreur : " + (err.message || err));
+      showToast("Erreur : " + (err.message || err), "error");
     }
   }
 
   async function resetCustomProfile() {
     isCustomProfile = false;
+    updateCustomProfileBadge();
     if (el.customPanel) el.customPanel.hidden = true;
     await fetchFullModels().catch(function() {});
   }
@@ -1216,6 +1222,185 @@
     } catch (_) {
       if (el.changelogCard) el.changelogCard.hidden = true;
     }
+  }
+
+  // ===== Toast notification system =====
+  function showToast(msg, type) {
+    type = type || 'info';
+    var container = document.getElementById('toast-container');
+    if (!container) return;
+    var toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.setAttribute('role', 'status');
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(function() {
+      toast.classList.add('toast-hide');
+      setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    }, 3500);
+  }
+
+  // ===== Export feedback =====
+  function exportFileWithFeedback(format, btnEl) {
+    exportFile(format);
+    if (!btnEl) return;
+    var orig = btnEl.textContent;
+    btnEl.textContent = 'Downloaded ✓';
+    setTimeout(function() { btnEl.textContent = orig; }, 1500);
+  }
+
+  // ===== Fit distribution rendering =====
+  function renderFitDistribution() {
+    var bar = document.getElementById('fit-distribution');
+    var legend = document.getElementById('fit-distribution-legend');
+    if (!bar || !legend) return;
+    if (!models.length) { bar.innerHTML = ''; legend.innerHTML = ''; return; }
+    var counts = { parfait: 0, bon: 0, marginal: 0, trop_juste: 0 };
+    models.forEach(function(r) { if (counts.hasOwnProperty(r.fit_level)) counts[r.fit_level]++; });
+    var total = models.length;
+    var segments = [
+      { key: 'parfait', cls: 'fit-seg-parfait', color: 'var(--fit-parfait)', label: t('parfait') },
+      { key: 'bon', cls: 'fit-seg-bon', color: 'var(--fit-bon)', label: t('bon') },
+      { key: 'marginal', cls: 'fit-seg-marginal', color: 'var(--fit-marginal)', label: t('marginal') },
+      { key: 'trop_juste', cls: 'fit-seg-trop', color: 'var(--fit-trop)', label: t('trop_juste') }
+    ];
+    bar.innerHTML = segments.map(function(s) {
+      var pct = total > 0 ? (counts[s.key] / total * 100) : 0;
+      return '<div class="fit-seg ' + s.cls + '" style="width:' + pct.toFixed(1) + '%" title="' + escapeHtml(s.label) + ': ' + counts[s.key] + '"></div>';
+    }).join('');
+    legend.innerHTML = segments.map(function(s) {
+      return '<span><span class="dot" style="background:' + s.color + '"></span>' + escapeHtml(s.label) + ': ' + counts[s.key] + '</span>';
+    }).join('');
+  }
+
+  // ===== Score color function =====
+  function scoreColorClass(val) {
+    var n = parseFloat(val);
+    if (isNaN(n)) return '';
+    if (n >= 70) return 'score-green';
+    if (n >= 40) return 'score-yellow';
+    return 'score-red';
+  }
+
+  // ===== Compact mode =====
+  var isCompactMode = false;
+  function toggleCompactMode() {
+    isCompactMode = !isCompactMode;
+    var modelsCard = document.querySelector('.models.card');
+    if (modelsCard) modelsCard.classList.toggle('compact-mode', isCompactMode);
+    var btn = document.getElementById('btn-compact');
+    if (btn) btn.textContent = isCompactMode ? '⊞ Détaillé' : '⊟ Compact';
+  }
+
+  // ===== Custom profile badge =====
+  function updateCustomProfileBadge() {
+    var badge = document.getElementById('custom-profile-badge');
+    if (!badge) return;
+    badge.classList.toggle('visible', isCustomProfile);
+  }
+
+  // ===== Search autocomplete =====
+  function renderSearchAutocomplete(query) {
+    var list = document.getElementById('search-autocomplete-list');
+    var input = document.getElementById('search');
+    if (!list || !input) return;
+    if (!query || query.length < 1) {
+      list.classList.remove('open');
+      input.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    var q = query.toLowerCase();
+    var matches = [];
+    for (var i = 0; i < models.length && matches.length < 5; i++) {
+      var name = (models[i].model && models[i].model.name) || '';
+      if (name.toLowerCase().includes(q) && matches.indexOf(name) === -1) {
+        matches.push(name);
+      }
+    }
+    if (!matches.length) {
+      list.classList.remove('open');
+      input.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    list.innerHTML = matches.map(function(m, idx) {
+      return '<div class="search-autocomplete-item" role="option" data-value="' + escapeHtml(m) + '">' + escapeHtml(m) + '</div>';
+    }).join('');
+    list.classList.add('open');
+    input.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeAutocomplete() {
+    var list = document.getElementById('search-autocomplete-list');
+    var input = document.getElementById('search');
+    if (list) list.classList.remove('open');
+    if (input) input.setAttribute('aria-expanded', 'false');
+  }
+
+  // ===== Favorites system =====
+  var FAVORITES_KEY = 'df_modelfit_favorites_v1';
+  function loadFavorites() {
+    try {
+      var raw = localStorage.getItem(FAVORITES_KEY);
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { return []; }
+  }
+  function saveFavorites(favs) {
+    try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs)); } catch (_) {}
+  }
+  function toggleFavorite(modelName) {
+    var favs = loadFavorites();
+    var idx = favs.indexOf(modelName);
+    if (idx >= 0) favs.splice(idx, 1);
+    else favs.push(modelName);
+    saveFavorites(favs);
+    return favs;
+  }
+  function isFavorite(modelName) {
+    return loadFavorites().indexOf(modelName) >= 0;
+  }
+
+  // ===== Scroll-to-top button =====
+  function initScrollTopButton() {
+    var btn = document.getElementById('scroll-top-btn');
+    if (!btn) return;
+    window.addEventListener('scroll', function() {
+      btn.classList.toggle('visible', window.scrollY > 400);
+    });
+    btn.addEventListener('click', function() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  // ===== Row tooltip =====
+  var tooltipTimeout = null;
+  function initRowTooltip() {
+    var tooltip = document.getElementById('row-tooltip');
+    if (!tooltip || !el.modelsTbody) return;
+    el.modelsTbody.addEventListener('mouseover', function(e) {
+      var row = e.target.closest('tr[data-row-id]');
+      if (!row) return;
+      clearTimeout(tooltipTimeout);
+      var rowId = parseInt(row.getAttribute('data-row-id'), 10);
+      var data = models.find(function(m) { return (m._id ?? m.model.name) === rowId; });
+      if (!data) return;
+      var tps = data.estimated_tps != null ? data.estimated_tps + ' tok/s' : '—';
+      var eco = data.eco_level || '—';
+      var mem = data.mem_requise_gb != null ? data.mem_requise_gb + ' Go' : '—';
+      tooltip.textContent = 'tok/s: ' + tps + ' | Énergie: ' + eco + ' | Mém: ' + mem;
+      tooltip.classList.add('visible');
+      var rect = row.getBoundingClientRect();
+      tooltip.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+      tooltip.style.left = (rect.left + window.scrollX) + 'px';
+    });
+    el.modelsTbody.addEventListener('mouseout', function(e) {
+      var row = e.target.closest('tr[data-row-id]');
+      if (!row) return;
+      tooltipTimeout = setTimeout(function() {
+        tooltip.classList.remove('visible');
+      }, 150);
+    });
   }
 
   function init() {
@@ -1331,11 +1516,11 @@
             el.btnHf.textContent = t("updateModels");
           } else {
             el.btnHf.textContent = t("updateModels");
-            alert(data.message || t("errorUpdateFail"));
+            showToast(data.message || t("errorUpdateFail"), "error");
           }
         } catch (err) {
           el.btnHf.textContent = t("updateModels");
-          alert(t("errorNetwork") + "\n\n" + (err.message || err));
+          showToast(t("errorNetwork"), "error");
         } finally {
           el.btnHf.disabled = false;
           if (el.btnHf.textContent === t("loadingShort")) el.btnHf.textContent = t("updateModels");
@@ -1451,12 +1636,67 @@
       });
     }
 
-    if (el.btnExportCsv) el.btnExportCsv.addEventListener("click", function() { exportFile("csv"); });
-    if (el.btnExportJson) el.btnExportJson.addEventListener("click", function() { exportFile("json"); });
+    if (el.btnExportCsv) el.btnExportCsv.addEventListener("click", function() { exportFileWithFeedback("csv", el.btnExportCsv); });
+    if (el.btnExportJson) el.btnExportJson.addEventListener("click", function() { exportFileWithFeedback("json", el.btnExportJson); });
 
     if (el.btnToggleCustom) el.btnToggleCustom.addEventListener("click", toggleCustomProfile);
     if (el.btnApplyCustom) el.btnApplyCustom.addEventListener("click", applyCustomProfile);
     if (el.btnResetCustom) el.btnResetCustom.addEventListener("click", resetCustomProfile);
+
+    // Compact mode toggle
+    var btnCompact = document.getElementById('btn-compact');
+    if (btnCompact) btnCompact.addEventListener('click', toggleCompactMode);
+
+    // Search autocomplete
+    if (el.search) {
+      el.search.addEventListener('input', function() {
+        renderSearchAutocomplete(el.search.value.trim());
+      });
+      el.search.addEventListener('blur', function() {
+        setTimeout(closeAutocomplete, 200);
+      });
+    }
+    var acList = document.getElementById('search-autocomplete-list');
+    if (acList) {
+      acList.addEventListener('mousedown', function(e) {
+        var item = e.target.closest('.search-autocomplete-item');
+        if (!item) return;
+        var val = item.getAttribute('data-value');
+        if (val && el.search) {
+          el.search.value = val;
+          closeAutocomplete();
+          applyFilters();
+          saveSettings();
+        }
+      });
+    }
+
+    // Favorites click handling
+    if (el.modelsTbody) {
+      el.modelsTbody.addEventListener('click', function(e) {
+        var star = e.target.closest('.fav-star');
+        if (!star) return;
+        e.stopPropagation();
+        var modelName = star.getAttribute('data-fav-model');
+        if (!modelName) return;
+        toggleFavorite(modelName);
+        var active = isFavorite(modelName);
+        star.classList.toggle('fav-active', active);
+        star.textContent = active ? '★' : '☆';
+      });
+    }
+
+    // ARIA: set aria-busy on tbody during loading
+    if (el.modelsTbody) el.modelsTbody.setAttribute('aria-busy', 'true');
+
+    // Scroll-to-top button
+    initScrollTopButton();
+
+    // Row tooltip
+    initRowTooltip();
+
+    // Custom profile badge
+    updateCustomProfileBadge();
 
     loadChangelog();
   }
@@ -1577,7 +1817,7 @@
           plugins: {
             legend: {
               labels: {
-                color: "#e4e4e7",
+                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e4e4e7',
               },
             },
           },

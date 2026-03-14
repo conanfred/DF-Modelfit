@@ -6,12 +6,17 @@
   <meta name="description" content="Outil de recommandation de modèles LLM adaptés à votre machine (RAM, CPU, GPU). Comparez et choisissez vos modèles.">
   <title>Recommandation de modèles LLM pour votre machine</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#0f0f12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  <noscript><p style="padding:2rem;text-align:center;font-family:sans-serif;">Ce site nécessite JavaScript pour fonctionner. Veuillez l'activer dans votre navigateur.</p></noscript>
   <div class="app">
     <header class="header">
       <div class="header-row">
@@ -32,6 +37,7 @@
     <section class="system card" id="system-card">
       <div class="system-header-row">
         <h2 data-i18n="yourConfig">Votre configuration</h2>
+        <span id="custom-profile-badge" class="custom-profile-badge" aria-live="polite">⚙️ Profil personnalisé actif</span>
         <button type="button" id="btn-toggle-custom" class="btn btn-secondary btn-small" data-i18n="customProfile">Profil personnalisé</button>
       </div>
       <div class="system-grid" id="system-grid">
@@ -69,9 +75,10 @@
     <section class="filters card">
       <form id="filters-form" class="filters-form" role="search" data-i18n-aria-label="filtersFormAriaLabel" aria-label="Filtres des modèles">
       <div class="filters-row">
-        <label>
+        <label class="search-autocomplete-wrap">
           <span data-i18n="search">Recherche</span>
-          <input type="text" id="search" data-i18n-placeholder="searchPlaceholder" placeholder="Nom ou fournisseur…" autocomplete="off">
+          <input type="text" id="search" data-i18n-placeholder="searchPlaceholder" placeholder="Nom ou fournisseur…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="search-autocomplete-list">
+          <div id="search-autocomplete-list" class="search-autocomplete" role="listbox"></div>
         </label>
         <label>
           <span data-i18n="fitTable">Fit (table)</span>
@@ -149,8 +156,11 @@
         <div class="export-buttons">
           <button type="button" id="btn-export-csv" class="btn btn-secondary btn-small" title="Export CSV">📥 CSV</button>
           <button type="button" id="btn-export-json" class="btn btn-secondary btn-small" title="Export JSON">📥 JSON</button>
+          <button type="button" id="btn-compact" class="btn btn-secondary btn-small btn-compact" title="Compact / Détaillé">⊟ Compact</button>
         </div>
       </div>
+      <div id="fit-distribution" class="fit-distribution-bar" role="img" aria-label="Distribution des niveaux de fit"></div>
+      <div id="fit-distribution-legend" class="fit-distribution-legend"></div>
       <div class="table-wrap">
         <table class="models-table">
           <thead>
@@ -223,6 +233,9 @@
     </section>
 
     </main>
+    <div id="toast-container" class="toast-container" aria-live="polite" role="status"></div>
+    <button type="button" id="scroll-top-btn" class="scroll-top-btn" aria-label="Retour en haut" title="Retour en haut">↑</button>
+    <div id="row-tooltip" class="row-tooltip"></div>
     <footer class="footer">
       <p class="footer-text" data-i18n-html="footerTextHtml"><strong>DF Modelfit</strong> — par <strong>DF AI Research</strong>. Données modèles : Hugging Face. Fit calculé localement (RAM/VRAM).</p>
       <p class="footer-support" data-i18n-html="footerSupportHtml">Soutien à la recherche : <a href="#soutien" target="_blank" rel="noopener noreferrer">Soutenez notre recherche</a>.</p>
