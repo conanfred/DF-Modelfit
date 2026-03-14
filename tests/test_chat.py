@@ -1,27 +1,33 @@
 """Tests pour api/chat.py — chat avec modèles IA locaux."""
 from unittest.mock import patch, MagicMock
 from api.chat import (
-    ChatMessage,
+    ChatOptions,
     ollama_is_available,
     ollama_list_chat_models,
     ollama_chat_sync,
-    build_screen_context_prompt,
+    get_model_defaults,
+    get_system_presets,
 )
 
 
-class TestChatMessage:
-    def test_basic(self):
-        msg = ChatMessage(role="user", content="hello")
-        assert msg.role == "user"
-        assert msg.content == "hello"
-        assert msg.images is None
+class TestChatOptions:
+    def test_defaults(self):
+        opts = ChatOptions()
+        assert opts.temperature == 0.7
+        assert opts.top_p == 0.9
+        assert opts.top_k == 40
+        assert opts.num_predict == 2048
+        assert opts.num_ctx == 4096
 
-    def test_with_images(self):
-        msg = ChatMessage(
-            role="user", content="what is this?",
-            images=["base64data"],
-        )
-        assert msg.images == ["base64data"]
+    def test_to_dict_no_seed(self):
+        opts = ChatOptions(seed=0)
+        d = opts.to_dict()
+        assert "seed" not in d
+
+    def test_to_dict_with_seed(self):
+        opts = ChatOptions(seed=42)
+        d = opts.to_dict()
+        assert d["seed"] == 42
 
 
 class TestOllamaIsAvailable:
@@ -113,13 +119,36 @@ class TestOllamaChatSync:
         assert result["error"] is True
 
 
-class TestBuildScreenContextPrompt:
-    def test_french(self):
-        prompt = build_screen_context_prompt("fr")
-        assert "DF Modelfit" in prompt
-        assert "captures d'écran" in prompt
+class TestGetModelDefaults:
+    def test_code_model_lower_temp(self):
+        model_info = {"family": "phi3", "supports_code": True, "supports_vision": False}
+        defaults = get_model_defaults(model_info)
+        assert defaults["temperature"] == 0.3
+        assert defaults["suggested_preset"] == "coder"
 
-    def test_english(self):
-        prompt = build_screen_context_prompt("en")
-        assert "DF Modelfit" in prompt
-        assert "screenshots" in prompt
+    def test_vision_model(self):
+        model_info = {"family": "llava", "supports_vision": True, "supports_code": False}
+        defaults = get_model_defaults(model_info)
+        assert defaults["suggested_preset"] == "vision"
+
+    def test_default_model(self):
+        model_info = {"family": "llama", "supports_vision": False, "supports_code": False}
+        defaults = get_model_defaults(model_info)
+        assert defaults["suggested_preset"] == "default"
+        assert defaults["temperature"] == 0.7
+
+
+class TestGetSystemPresets:
+    def test_returns_all_presets(self):
+        presets = get_system_presets()
+        assert "default" in presets
+        assert "coder" in presets
+        assert "analyst" in presets
+        assert "vision" in presets
+        assert "creative" in presets
+
+    def test_presets_have_fr_en(self):
+        presets = get_system_presets()
+        for key, val in presets.items():
+            assert "fr" in val, f"Preset {key} missing 'fr'"
+            assert "en" in val, f"Preset {key} missing 'en'"
