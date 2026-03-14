@@ -300,7 +300,7 @@
     </footer>
   </div>
   <!-- Chat Panel -->
-  <div id="chat-panel" class="chat-panel" hidden>
+  <div id="chat-panel" class="chat-panel">
     <div class="chat-panel-header">
       <div class="chat-panel-title-row">
         <h3>💬 Chat IA</h3>
@@ -310,27 +310,93 @@
         <select id="chat-model-select" class="chat-model-select">
           <option value="">Sélectionner un modèle…</option>
         </select>
-        <span id="chat-vision-badge" class="chat-vision-badge" hidden title="Ce modèle supporte la vision (images)">👁️ Vision</span>
+        <div class="chat-model-badges" id="chat-model-badges"></div>
       </div>
-      <div class="chat-actions-row">
-        <button type="button" id="btn-chat-screenshot" class="btn btn-small btn-secondary" title="Capturer l'écran et envoyer à l'IA">📸 Capture écran</button>
-        <button type="button" id="btn-chat-clear" class="btn btn-small btn-secondary" title="Effacer la conversation">🗑️ Effacer</button>
+      <div class="chat-model-info" id="chat-model-info"></div>
+      <div class="chat-settings-toggle-row">
+        <button type="button" id="btn-chat-settings-toggle" class="btn btn-small btn-secondary">⚙️ Paramètres</button>
+      </div>
+      <div id="chat-settings-drawer" class="chat-settings-drawer">
+        <div class="chat-settings-group">
+          <label><span>Preset système</span>
+            <select id="chat-preset-select" class="chat-settings-select">
+              <option value="default">🤖 Default</option>
+              <option value="coder">💻 Coder</option>
+              <option value="analyst">📊 Analyst</option>
+              <option value="vision">👁️ Vision</option>
+              <option value="creative">🎨 Creative</option>
+            </select>
+          </label>
+          <label><span>System prompt personnalisé</span>
+            <textarea id="chat-system-prompt" class="chat-settings-textarea" rows="3" placeholder="Laisser vide pour utiliser le preset…"></textarea>
+          </label>
+          <label><span>Temperature: <strong id="chat-temp-val">0.7</strong></span>
+            <input type="range" id="chat-temperature" min="0" max="2" step="0.1" value="0.7" class="chat-slider">
+          </label>
+          <label><span>Top P: <strong id="chat-topp-val">0.9</strong></span>
+            <input type="range" id="chat-top-p" min="0" max="1" step="0.05" value="0.9" class="chat-slider">
+          </label>
+          <label><span>Top K</span>
+            <input type="number" id="chat-top-k" min="1" max="100" value="40" class="chat-settings-input">
+          </label>
+          <label><span>Max tokens (num_predict)</span>
+            <input type="number" id="chat-num-predict" min="1" max="131072" value="2048" class="chat-settings-input">
+          </label>
+          <label><span>Context window (num_ctx)</span>
+            <input type="number" id="chat-num-ctx" min="256" max="131072" value="4096" class="chat-settings-input">
+          </label>
+          <label><span>Repeat penalty: <strong id="chat-repeat-val">1.1</strong></span>
+            <input type="range" id="chat-repeat-penalty" min="1" max="2" step="0.05" value="1.1" class="chat-slider">
+          </label>
+          <label><span>Seed (0 = random)</span>
+            <input type="number" id="chat-seed" min="0" value="0" class="chat-settings-input">
+          </label>
+          <button type="button" id="btn-chat-reset-defaults" class="btn btn-small btn-secondary" style="margin-top:0.5rem">Réinitialiser</button>
+        </div>
       </div>
     </div>
+
+    <div class="chat-conversations-bar">
+      <button type="button" id="btn-chat-new" class="btn btn-small">➕ Nouvelle conversation</button>
+      <button type="button" id="btn-chat-convos-toggle" class="btn btn-small btn-secondary">📋 Conversations</button>
+    </div>
+    <div id="chat-conversations-list" class="chat-conversations-list"></div>
+
     <div id="chat-messages" class="chat-messages" role="log" aria-live="polite">
       <div class="chat-welcome">
         <p><strong>Discutez avec vos modèles IA locaux</strong></p>
         <p class="chat-welcome-sub">Sélectionnez un modèle installé via Ollama, posez vos questions, ou utilisez 📸 pour partager votre écran avec un modèle vision.</p>
       </div>
     </div>
-    <div id="chat-screenshot-preview" class="chat-screenshot-preview" hidden>
-      <img id="chat-screenshot-img" alt="Capture d'écran" />
-      <button type="button" id="btn-chat-remove-screenshot" class="btn-chat-remove-screenshot" title="Retirer la capture">✕</button>
+
+    <div id="chat-image-zone" class="chat-image-zone" hidden>
+      <div id="chat-drop-zone" class="chat-drop-zone">
+        <span>Glissez-déposez une image ici</span>
+      </div>
+      <div class="chat-image-actions">
+        <button type="button" id="btn-chat-screenshot" class="btn btn-small btn-secondary">📸 Capture écran</button>
+        <label class="btn btn-small btn-secondary chat-file-label">
+          📎 Joindre image
+          <input type="file" id="chat-file-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+        </label>
+      </div>
+      <div id="chat-image-preview" class="chat-image-preview" hidden>
+        <img id="chat-preview-img" alt="Image jointe">
+        <button type="button" id="btn-chat-remove-image" class="btn-chat-remove-image" title="Retirer">✕</button>
+      </div>
     </div>
-    <form id="chat-input-form" class="chat-input-form">
-      <textarea id="chat-input" class="chat-input" rows="2" placeholder="Écrivez votre message…" disabled></textarea>
-      <button type="submit" id="btn-chat-send" class="btn btn-chat-send" disabled title="Envoyer">➤</button>
-    </form>
+
+    <div class="chat-input-area">
+      <form id="chat-input-form" class="chat-input-form">
+        <textarea id="chat-input" class="chat-input" rows="1" placeholder="Écrivez votre message…" disabled></textarea>
+        <div class="chat-input-buttons">
+          <button type="submit" id="btn-chat-send" class="btn btn-chat-send" disabled title="Envoyer">➤</button>
+          <button type="button" id="btn-chat-stop" class="btn btn-chat-stop" hidden title="Arrêter">⬛</button>
+          <button type="button" id="btn-chat-regenerate" class="btn btn-chat-regenerate" hidden title="Régénérer">🔄</button>
+        </div>
+      </form>
+      <div class="chat-token-estimate" id="chat-token-estimate"></div>
+    </div>
   </div>
   <button type="button" id="btn-chat-toggle" class="btn-chat-toggle" title="Ouvrir le chat IA">💬</button>
 
