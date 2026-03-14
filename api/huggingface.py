@@ -1,11 +1,14 @@
 # Chargement des modèles depuis l'API Hugging Face — DF AI Research
 import json
+import logging
 import os
 import re
 import time
 import urllib.request
 import urllib.error
 from urllib.parse import parse_qs, quote, urlparse
+
+logger = logging.getLogger(__name__)
 
 HF_API = "https://huggingface.co/api/models"
 # Nombre max de modèles à récupérer via la liste paginée (évite des milliers d’appels).
@@ -157,8 +160,10 @@ def fetch_model_list_from_api(
             if not cursor or not data:
                 break
             time.sleep(0.2)
-        except (OSError, urllib.error.HTTPError, json.JSONDecodeError, ValueError):
+        except (OSError, urllib.error.HTTPError, json.JSONDecodeError, ValueError) as exc:
+            logger.warning("HF list fetch error for %s: %s", pipeline_filter, exc)
             break
+    logger.info("Fetched %d models for pipeline %s", len(items), pipeline_filter)
     return items
 
 
@@ -167,8 +172,11 @@ def _smart_select(items: list[dict], n: int) -> list[str]:
     if not items or n <= 0:
         return []
     n = min(n, len(items))
-    score_key = lambda x: (x.get("likes") or 0) + (x.get("trendingScore") or 0)
-    date_key = lambda x: x.get("createdAt") or ""
+    def score_key(x: dict) -> int:
+        return (x.get("likes") or 0) + (x.get("trendingScore") or 0)
+
+    def date_key(x: dict) -> str:
+        return x.get("createdAt") or ""
     n_best = max(1, round(n * 0.75))
     n_new = n - n_best
     by_score = sorted(items, key=score_key, reverse=True)

@@ -1,10 +1,12 @@
 # Logique de « fit » : comparer modèle vs matériel
+import logging
+import math
 from dataclasses import dataclass
 from typing import Any
 
-import math
-
 from .system import SystemSpecs
+
+logger = logging.getLogger(__name__)
 
 
 FIT_PARFAIT = "parfait"

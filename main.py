@@ -1,62 +1,113 @@
 """
 DF Modelfit — DF AI Research. Outil web : quels modèles LLM pour votre machine (RAM, CPU, GPU).
-Lance le serveur API + sert l’interface HTML.
+Lance le serveur API + sert l'interface HTML.
 """
 import json
+import logging
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from functools import partial
+from io import StringIO
 from pathlib import Path
 
-from fastapi import Query
-
-from fastapi import FastAPI, HTTPException, APIRouter, Request
+from fastapi import Query, FastAPI, HTTPException, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
+from pydantic import BaseModel, Field
 
-from api.system import detect, SystemSpecs
+from api.system import detect, detect_custom
 from api.fit import analyser, to_dict
 from api.huggingface import fetch_models_from_hf
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("df_modelfit")
+
+
+# ---------------------------------------------------------------------------
+# Pydantic models
+# ---------------------------------------------------------------------------
+
+class ErrorResponse(BaseModel):
+    ok: bool = False
+    message: str
+    code: str = "error"
+
+
+class HealthResponse(BaseModel):
+    status: str = "ok"
+    app: str = "DF Modelfit"
+
+
+class SystemResponse(BaseModel):
+    total_ram_gb: float
+    available_ram_gb: float
+    cpu_cores: int
+    cpu_name: str
+    has_gpu: bool
+    gpu_name: str | None = None
+    gpu_vram_gb: float | None = None
+    backend: str
+    models_last_updated: str | None = None
+
+
+class CustomProfileRequest(BaseModel):
+    total_ram_gb: float = Field(ge=1, le=2048, description="RAM totale en Go")
+    cpu_cores: int = Field(ge=1, le=1024, description="Nombre de cœurs CPU")
+    gpu_vram_gb: float | None = Field(None, ge=0, le=1024, description="VRAM GPU en Go (null = pas de GPU)")
+    backend: str = Field("cpu", description="Backend d'inférence (cpu, cuda, metal, rocm)")
+
+
+class RefreshResponse(BaseModel):
+    ok: bool
+    count: int
+    added: int = 0
+    updated: int = 0
+    message: str
+    last_updated: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# App setup
+# ---------------------------------------------------------------------------
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global MODELS
     MODELS = load_models()
+    logger.info("Loaded %d models at startup", len(MODELS))
     yield
 
 
-app = FastAPI(title="DF Modelfit", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="DF Modelfit", version="1.1.0", lifespan=lifespan)
 
-# CORS : autoriser les requêtes depuis d'autres origines (ex. front sur autre port)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5050", "http://127.0.0.1:5050"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Rate limit pour /api/refresh : 1 appel par IP toutes les 5 minutes
 _REFRESH_RATE_LIMIT_MINUTES = 5
 _refresh_last_by_ip: dict[str, float] = {}
 
 
-def _parse_iso(s: str | None) -> datetime | None:
-    """
-    Parse une chaîne ISO 8601 et renvoie toujours un datetime *aware* en UTC.
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-    - Accepte les formes avec ou sans timezone (ex. '2024-02-10', '2024-02-10T00:00:00', '...Z').
-    - Les dates sans timezone sont interprétées comme UTC.
-    """
+def _parse_iso(s: str | None) -> datetime | None:
+    """Parse une chaîne ISO 8601 et renvoie toujours un datetime *aware* en UTC."""
     if not s:
         return None
     try:
-        # Normaliser le suffixe 'Z' en offset explicite
         s_norm = s.replace("Z", "+00:00")
         dt = datetime.fromisoformat(s_norm)
-        # Si la date est naive (pas de timezone), on l'interprète comme UTC
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
@@ -65,11 +116,6 @@ def _parse_iso(s: str | None) -> datetime | None:
 
 
 def _model_status(model: dict, last_updated: str | None) -> str | None:
-    """
-    Statut par rapport aux dates Hugging Face :
-    - 'new'     : modèle récemment créé sur HF (hf_created_at proche de la dernière mise à jour locale)
-    - 'updated' : modèle plus ancien mais récemment modifié sur HF (hf_last_modified proche de la dernière mise à jour locale)
-    """
     if not last_updated:
         return None
     t_end = _parse_iso(last_updated)
@@ -77,7 +123,6 @@ def _model_status(model: dict, last_updated: str | None) -> str | None:
         return None
     t_created_hf = _parse_iso(model.get("hf_created_at") or model.get("release_date"))
     t_modified_hf = _parse_iso(model.get("hf_last_modified") or model.get("updated_at"))
-    # Fenêtre de 30 jours pour considérer qu'un événement est "récent" par rapport à la dernière mise à jour locale
     window_days = 30 * 24 * 3600
     if t_created_hf is not None and abs((t_end - t_created_hf).total_seconds()) <= window_days:
         return "new"
@@ -90,23 +135,22 @@ def _model_status(model: dict, last_updated: str | None) -> str | None:
         return "updated"
     return None
 
-# Charger les modèles une fois au démarrage
+
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATA_DIR = PROJECT_ROOT / "data"
 DATA_PATHS = [
     DATA_DIR / "hf_models.json",
     DATA_DIR / "models.json",
 ]
-# Fichier de référence : liste d’origine (100 modèles) pour ne pas repartir de zéro.
 DATA_ORIGINAL = DATA_DIR / "hf_models_original.json"
 LAST_UPDATE_FILE = DATA_DIR / "last_update.json"
-MIN_MODELS_USE_ORIGINAL = 50  # Si le fichier chargé a moins de modèles, on préfère l'original
+MIN_MODELS_USE_ORIGINAL = 50
+MIN_MODELS_TO_SAVE = 4
 
 MODELS: list[dict] = []
 
 
 def _read_last_updated() -> str | None:
-    """Lit la date de dernière mise à jour des modèles (fichier JSON local)."""
     if not LAST_UPDATE_FILE.exists():
         return None
     try:
@@ -118,7 +162,6 @@ def _read_last_updated() -> str | None:
 
 
 def _save_models_and_date(models_list: list[dict]) -> None:
-    """Enregistre la liste des modèles dans data/hf_models.json et la date dans data/last_update.json."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     hf_path = DATA_DIR / "hf_models.json"
     with open(hf_path, "w", encoding="utf-8") as f:
@@ -129,12 +172,6 @@ def _save_models_and_date(models_list: list[dict]) -> None:
 
 
 def _merge_models(existing: list[dict], fetched: list[dict], now_iso: str) -> tuple[list[dict], int, int]:
-    """
-    Fusionne la liste existante avec les modèles récupérés depuis HF.
-    - Modèle déjà présent : on met à jour les champs et updated_at, on garde created_at.
-    - Nouveau modèle : on l’ajoute avec created_at et updated_at = now.
-    Retourne (liste fusionnée, nombre ajoutés, nombre mis à jour).
-    """
     by_name: dict[str, dict] = {m.get("name") or "": m for m in existing if m.get("name")}
     added = 0
     updated = 0
@@ -144,7 +181,6 @@ def _merge_models(existing: list[dict], fetched: list[dict], now_iso: str) -> tu
             continue
         if name in by_name:
             old = by_name[name]
-            # Conserver une date de création ancienne pour afficher "Mis à jour" et non "Nouveau"
             created = old.get("created_at") or (old.get("release_date") or "2020-01-01")[:10] + "T00:00:00+00:00"
             old.clear()
             old.update(f)
@@ -159,7 +195,6 @@ def _merge_models(existing: list[dict], fetched: list[dict], now_iso: str) -> tu
             added += 1
     for entry in by_name.values():
         if "updated_at" not in entry or "created_at" not in entry:
-            # Modèle déjà présent mais sans dates (ancien) : on met une date ancienne pour ne pas afficher "Nouveau" ni "Mis à jour"
             old_date = (entry.get("release_date") or "2020-01-01")[:10] + "T00:00:00+00:00"
             if "updated_at" not in entry:
                 entry["updated_at"] = old_date
@@ -169,94 +204,8 @@ def _merge_models(existing: list[dict], fetched: list[dict], now_iso: str) -> tu
     merged.sort(key=lambda x: x.get("parameters_raw") or 0)
     return merged, added, updated
 
-# Routeur API (enregistré en premier pour éviter 404 sur /api/refresh)
-api_router = APIRouter(prefix="/api", tags=["api"])
-
-
-@api_router.get("/health")
-def api_health():
-    """Vérifie que le serveur DF Modelfit répond."""
-    return { "status": "ok", "app": "DF Modelfit" }
-
-
-@api_router.post("/reset-original")
-def api_reset_original():
-    """Restaure data/hf_models.json à partir de data/hf_models_original.json (liste d’origine)."""
-    global MODELS
-    if not DATA_ORIGINAL.exists():
-        return { "ok": False, "message": "Fichier hf_models_original.json introuvable." }
-    try:
-        with open(DATA_ORIGINAL, encoding="utf-8") as f:
-            data = json.load(f)
-        if not isinstance(data, list):
-            return { "ok": False, "message": "Format invalide dans hf_models_original.json." }
-        now_iso = datetime.now(timezone.utc).isoformat()
-        for m in data:
-            if "created_at" not in m:
-                m["created_at"] = now_iso
-            if "updated_at" not in m:
-                m["updated_at"] = now_iso
-        MODELS = data
-        _save_models_and_date(MODELS)
-        return { "ok": True, "count": len(MODELS), "message": f"Liste d’origine restaurée ({len(MODELS)} modèles)." }
-    except (json.JSONDecodeError, OSError) as e:
-        return { "ok": False, "message": str(e) }
-
-
-# Seuil minimal : on n’écrase le JSON que si on a au moins autant de modèles (évite de remplacer par une liste vide ou trop courte).
-MIN_MODELS_TO_SAVE = 4
-
-
-@api_router.api_route("/refresh", methods=["GET", "POST"])
-def api_refresh(request: Request, max_models: int | None = Query(None, ge=5, le=20)):
-    """Mise à jour : récupère les modèles depuis Hugging Face et enregistre dans data/hf_models.json.
-    Query param max_models : max par usage, uniquement 5, 10, 15 ou 20 (défaut 20). Sélection : 75% meilleurs, 25% récents."""
-    global MODELS
-    # Rate limit : 1 appel par IP toutes les 5 minutes
-    client_ip = request.client.host if request.client else "unknown"
-    now_ts = time.time()
-    last_ts = _refresh_last_by_ip.get(client_ip, 0)
-    if now_ts - last_ts < _REFRESH_RATE_LIMIT_MINUTES * 60:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Refresh limité à une fois toutes les {_REFRESH_RATE_LIMIT_MINUTES} minutes. Réessayez plus tard.",
-        )
-    if max_models is not None and max_models not in (5, 10, 15, 20):
-        max_models = 20
-    try:
-        existing = load_models()
-        fetched = fetch_models_from_hf(limit_per_usage=max_models)
-        now_iso = datetime.now(timezone.utc).isoformat()
-        merged, added, updated = _merge_models(existing, fetched, now_iso)
-        if len(merged) < len(existing) and len(fetched) < MIN_MODELS_TO_SAVE:
-            return {
-                "ok": False,
-                "count": len(fetched),
-                "message": f"HF a renvoye {len(fetched)} modele(s). Donnees non modifiees.",
-                "last_updated": _read_last_updated(),
-            }
-        MODELS = merged
-        _save_models_and_date(MODELS)
-        last = _read_last_updated()
-        return {
-            "ok": True,
-            "count": len(merged),
-            "added": added,
-            "updated": updated,
-            "message": f"{len(merged)} modèle(s) au total. {added} nouveau(x), {updated} mis à jour. Données enregistrées.",
-            "last_updated": last,
-        }
-    except Exception as e:
-        return { "ok": False, "count": 0, "message": str(e), "last_updated": _read_last_updated() }
-    finally:
-        _refresh_last_by_ip[client_ip] = time.time()
-
-
-app.include_router(api_router)
-
 
 def load_models() -> list[dict]:
-    """Charge les modèles : hf_models.json, sinon models.json, sinon hf_models_original.json (liste d’origine), sinon liste minimale."""
     for p in (*DATA_PATHS, DATA_ORIGINAL):
         if not p or not p.exists():
             continue
@@ -313,23 +262,156 @@ def load_models() -> list[dict]:
     ]
 
 
-@app.get("/api/system")
+# ---------------------------------------------------------------------------
+# API router
+# ---------------------------------------------------------------------------
+
+api_router = APIRouter(prefix="/api", tags=["api"])
+
+
+@api_router.get("/health", response_model=HealthResponse)
+def api_health():
+    """Vérifie que le serveur DF Modelfit répond."""
+    return HealthResponse()
+
+
+@api_router.post("/reset-original")
+def api_reset_original():
+    """Restaure data/hf_models.json à partir de data/hf_models_original.json."""
+    global MODELS
+    if not DATA_ORIGINAL.exists():
+        raise HTTPException(status_code=404, detail="Fichier hf_models_original.json introuvable.")
+    try:
+        with open(DATA_ORIGINAL, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, list):
+            raise HTTPException(status_code=422, detail="Format invalide dans hf_models_original.json.")
+        now_iso = datetime.now(timezone.utc).isoformat()
+        for m in data:
+            if "created_at" not in m:
+                m["created_at"] = now_iso
+            if "updated_at" not in m:
+                m["updated_at"] = now_iso
+        MODELS = data
+        _save_models_and_date(MODELS)
+        logger.info("Original models restored: %d models", len(MODELS))
+        return {"ok": True, "count": len(MODELS), "message": f"Liste d'origine restaurée ({len(MODELS)} modèles)."}
+    except (json.JSONDecodeError, OSError) as e:
+        logger.error("Failed to restore original models: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.api_route("/refresh", methods=["GET", "POST"])
+async def api_refresh(request: Request, max_models: int | None = Query(None, ge=5, le=20)):
+    """Mise à jour : récupère les modèles depuis Hugging Face (non-bloquant)."""
+    global MODELS
+    client_ip = request.client.host if request.client else "unknown"
+    now_ts = time.time()
+    last_ts = _refresh_last_by_ip.get(client_ip, 0)
+    if now_ts - last_ts < _REFRESH_RATE_LIMIT_MINUTES * 60:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Refresh limité à une fois toutes les {_REFRESH_RATE_LIMIT_MINUTES} minutes. Réessayez plus tard.",
+        )
+    if max_models is not None and max_models not in (5, 10, 15, 20):
+        max_models = 20
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+        existing = load_models()
+        fetched = await loop.run_in_executor(
+            None, partial(fetch_models_from_hf, limit_per_usage=max_models)
+        )
+        now_iso = datetime.now(timezone.utc).isoformat()
+        merged, added, updated = _merge_models(existing, fetched, now_iso)
+        if len(merged) < len(existing) and len(fetched) < MIN_MODELS_TO_SAVE:
+            logger.warning("HF returned too few models (%d), keeping existing data", len(fetched))
+            return RefreshResponse(
+                ok=False,
+                count=len(fetched),
+                message=f"HF a renvoyé {len(fetched)} modèle(s). Données non modifiées.",
+                last_updated=_read_last_updated(),
+            )
+        MODELS = merged
+        _save_models_and_date(MODELS)
+        last = _read_last_updated()
+        logger.info("HF refresh: %d total, %d added, %d updated", len(merged), added, updated)
+        return RefreshResponse(
+            ok=True,
+            count=len(merged),
+            added=added,
+            updated=updated,
+            message=f"{len(merged)} modèle(s) au total. {added} nouveau(x), {updated} mis à jour. Données enregistrées.",
+            last_updated=last,
+        )
+    except Exception as e:
+        logger.error("HF refresh failed: %s", e, exc_info=True)
+        return RefreshResponse(
+            ok=False, count=0, message=str(e), last_updated=_read_last_updated()
+        )
+    finally:
+        _refresh_last_by_ip[client_ip] = time.time()
+
+
+app.include_router(api_router)
+
+
+# ---------------------------------------------------------------------------
+# Main endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/system", response_model=SystemResponse)
 def api_system():
-    """Spécifications matérielles détectées + date de dernière mise à jour des modèles."""
+    """Spécifications matérielles détectées."""
     s = detect()
-    out = {
-        "total_ram_gb": s.total_ram_gb,
-        "available_ram_gb": s.available_ram_gb,
-        "cpu_cores": s.cpu_cores,
-        "cpu_name": s.cpu_name,
-        "has_gpu": s.has_gpu,
-        "gpu_name": s.gpu_name,
-        "gpu_vram_gb": s.gpu_vram_gb,
-        "backend": s.backend,
-    }
+    out = SystemResponse(
+        total_ram_gb=s.total_ram_gb,
+        available_ram_gb=s.available_ram_gb,
+        cpu_cores=s.cpu_cores,
+        cpu_name=s.cpu_name,
+        has_gpu=s.has_gpu,
+        gpu_name=s.gpu_name,
+        gpu_vram_gb=s.gpu_vram_gb,
+        backend=s.backend,
+        models_last_updated=_read_last_updated(),
+    )
+    return out
+
+
+@app.post("/api/system/custom")
+def api_system_custom(profile: CustomProfileRequest):
+    """Analyse avec un profil matériel personnalisé (mode manuel)."""
+    custom_specs = detect_custom(
+        total_ram_gb=profile.total_ram_gb,
+        cpu_cores=profile.cpu_cores,
+        gpu_vram_gb=profile.gpu_vram_gb,
+        backend=profile.backend,
+    )
     last = _read_last_updated()
+    results = []
+    for m in MODELS:
+        try:
+            f = analyser(m, custom_specs)
+            d = to_dict(f)
+        except Exception:
+            continue
+        d["status"] = _model_status(m, last)
+        results.append(d)
+    order = {"parfait": 0, "bon": 1, "marginal": 2, "trop_juste": 3}
+    results.sort(key=lambda x: (order.get(x["fit_level"], 4), -x["utilisation_pct"]))
+    system_dict = {
+        "total_ram_gb": custom_specs.total_ram_gb,
+        "available_ram_gb": custom_specs.available_ram_gb,
+        "cpu_cores": custom_specs.cpu_cores,
+        "cpu_name": custom_specs.cpu_name,
+        "has_gpu": custom_specs.has_gpu,
+        "gpu_name": custom_specs.gpu_name,
+        "gpu_vram_gb": custom_specs.gpu_vram_gb,
+        "backend": custom_specs.backend,
+    }
+    out = {"system": system_dict, "models": results, "custom": True}
     if last is not None:
-        out["models_last_updated"] = last
+        out["last_updated"] = last
     return out
 
 
@@ -344,6 +426,7 @@ def api_models(search: str | None = None, fit: str | None = None):
             f = analyser(m, system)
             d = to_dict(f)
         except Exception:
+            logger.debug("Skipping model %s: analysis failed", m.get("name", "?"), exc_info=True)
             continue
         if search and search.lower() not in (m.get("name") or "").lower() and search.lower() not in (m.get("provider") or "").lower():
             continue
@@ -351,10 +434,9 @@ def api_models(search: str | None = None, fit: str | None = None):
             continue
         d["status"] = _model_status(m, last)
         results.append(d)
-    # Trier : runnable d’abord, puis par utilisation croissante
-    order = { "parfait": 0, "bon": 1, "marginal": 2, "trop_juste": 3 }
+    order = {"parfait": 0, "bon": 1, "marginal": 2, "trop_juste": 3}
     results.sort(key=lambda x: (order.get(x["fit_level"], 4), -x["utilisation_pct"]))
-    out = { "system": api_system(), "models": results }
+    out = {"system": api_system(), "models": results}
     if last is not None:
         out["last_updated"] = last
     return out
@@ -370,7 +452,7 @@ def api_models_top(limit: int = Query(10, ge=1, le=100)):
         if f.fit_level != "trop_juste":
             runnable.append(to_dict(f))
     runnable.sort(key=lambda x: (-x["utilisation_pct"], x["mem_requise_gb"]))
-    return { "system": api_system(), "models": runnable[:limit] }
+    return {"system": api_system(), "models": runnable[:limit]}
 
 
 @app.get("/api/recommend")
@@ -381,24 +463,13 @@ def api_recommend(
     max_params: float | None = Query(None, ge=0),
     min_context: int | None = Query(None, ge=0),
 ):
-    """
-    Recommandation de modèles selon le cas d'usage et quelques filtres.
-
-    Paramètres :
-    - use_case : texte libre (ex. 'coding', 'chat', 'reasoning', 'edge') utilisé comme filtre souple ;
-    - limit : nombre maximum de modèles retournés ;
-    - min_fit : niveau de fit minimal ('parfait', 'bon', 'marginal', 'trop_juste') ;
-    - max_params : nombre max de paramètres en milliards (approximation) ;
-    - min_context : longueur de contexte minimale.
-    """
+    """Recommandation de modèles selon le cas d'usage et quelques filtres."""
     try:
         system = detect()
         last = _read_last_updated()
-
         use_case_filter = (use_case or "").strip().lower()
         fit_order = {"parfait": 0, "bon": 1, "marginal": 2, "trop_juste": 3}
         min_fit_rank = fit_order.get((min_fit or "").lower(), None)
-
         results: list[dict] = []
         for m in MODELS:
             try:
@@ -406,17 +477,14 @@ def api_recommend(
                 d = to_dict(f)
             except Exception:
                 continue
-
             if min_fit_rank is not None and fit_order.get(f.fit_level, 99) > min_fit_rank:
                 continue
             if use_case_filter:
-                blob = " ".join(
-                    [
-                        str(m.get("use_case") or ""),
-                        str(m.get("name") or ""),
-                        str(m.get("provider") or ""),
-                    ]
-                ).lower()
+                blob = " ".join([
+                    str(m.get("use_case") or ""),
+                    str(m.get("name") or ""),
+                    str(m.get("provider") or ""),
+                ]).lower()
                 if use_case_filter not in blob:
                     continue
             if max_params is not None:
@@ -429,25 +497,21 @@ def api_recommend(
                 ctx = int(m.get("context_length") or 0)
                 if ctx < int(min_context):
                     continue
-
             d["status"] = _model_status(m, last)
             results.append(d)
-
-        results.sort(
-            key=lambda x: (
-                -float(x.get("score") or 0.0),
-                fit_order.get(x.get("fit_level"), 99),
-                -float(x.get("utilisation_pct") or 0.0),
-            )
-        )
+        results.sort(key=lambda x: (
+            -float(x.get("score") or 0.0),
+            fit_order.get(x.get("fit_level"), 99),
+            -float(x.get("utilisation_pct") or 0.0),
+        ))
         if limit is not None and limit > 0:
-            results = results[: int(limit)]
-
+            results = results[:int(limit)]
         out = {"system": api_system(), "models": results}
         if last is not None:
             out["last_updated"] = last
         return out
     except Exception:
+        logger.error("Recommend endpoint failed", exc_info=True)
         try:
             out = {"system": api_system(), "models": []}
         except Exception:
@@ -458,7 +522,111 @@ def api_recommend(
         return out
 
 
-# Fichiers statiques (HTML, CSS, JS)
+# ---------------------------------------------------------------------------
+# Export endpoints (CSV / JSON)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/export/json")
+def api_export_json():
+    """Exporte tous les modèles avec fit en JSON."""
+    system = detect()
+    last = _read_last_updated()
+    results = []
+    for m in MODELS:
+        try:
+            f = analyser(m, system)
+            d = to_dict(f)
+            d["status"] = _model_status(m, last)
+            results.append(d)
+        except Exception:
+            continue
+    return JSONResponse(
+        content=results,
+        headers={
+            "Content-Disposition": "attachment; filename=df_modelfit_export.json",
+        },
+    )
+
+
+@app.get("/api/export/csv")
+def api_export_csv():
+    """Exporte tous les modèles avec fit en CSV."""
+    system = detect()
+    last = _read_last_updated()
+    buf = StringIO()
+    headers = [
+        "name", "provider", "parameter_count", "fit_level", "mode",
+        "mem_requise_gb", "mem_dispo_gb", "utilisation_pct",
+        "score", "score_quality", "score_speed", "score_fit", "score_context",
+        "estimated_tps", "context_length", "use_case", "status",
+    ]
+    buf.write(",".join(headers) + "\n")
+    for m in MODELS:
+        try:
+            f = analyser(m, system)
+            d = to_dict(f)
+            status = _model_status(m, last) or ""
+            row = [
+                str(d["model"].get("name", "")),
+                str(d["model"].get("provider", "")),
+                str(d["model"].get("parameter_count", "")),
+                str(d["fit_level"]),
+                str(d["mode"]),
+                str(d["mem_requise_gb"]),
+                str(d["mem_dispo_gb"]),
+                str(d["utilisation_pct"]),
+                str(d["score"]),
+                str(d["score_quality"]),
+                str(d["score_speed"]),
+                str(d["score_fit"]),
+                str(d["score_context"]),
+                str(d["estimated_tps"]),
+                str(d["model"].get("context_length", "")),
+                str(d["model"].get("use_case", "")),
+                status,
+            ]
+            row = ['"' + v.replace('"', '""') + '"' for v in row]
+            buf.write(",".join(row) + "\n")
+        except Exception:
+            continue
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=df_modelfit_export.csv"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Changelog endpoint
+# ---------------------------------------------------------------------------
+
+@app.get("/api/changelog")
+def api_changelog():
+    """Retourne les modèles récemment ajoutés/mis à jour (changelog HF)."""
+    last = _read_last_updated()
+    if not last:
+        return {"entries": [], "last_updated": None}
+    entries = []
+    for m in MODELS:
+        status = _model_status(m, last)
+        if status:
+            entries.append({
+                "name": m.get("name", "?"),
+                "provider": m.get("provider", "?"),
+                "status": status,
+                "created_at": m.get("created_at"),
+                "updated_at": m.get("updated_at"),
+                "parameter_count": m.get("parameter_count", "?"),
+            })
+    entries.sort(key=lambda x: x.get("updated_at") or "", reverse=True)
+    return {"entries": entries[:50], "last_updated": last}
+
+
+# ---------------------------------------------------------------------------
+# Static files & pages
+# ---------------------------------------------------------------------------
+
 static_dir = PROJECT_ROOT / "static"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -466,7 +634,7 @@ if static_dir.exists():
 
 @app.get("/")
 def index():
-    """Page d’accueil."""
+    """Page d'accueil."""
     index_html = PROJECT_ROOT / "static" / "index.html"
     if index_html.exists():
         return FileResponse(index_html)
@@ -484,7 +652,7 @@ def support_page():
 
 @app.get("/license")
 def license_txt():
-    """Fichier de licence (usage public gratuit ; entreprises/laboratoires : seule licence écrite et signée acceptée)."""
+    """Fichier de licence."""
     lic_path = PROJECT_ROOT / "LICENSE"
     if not lic_path.exists():
         raise HTTPException(404, "LICENSE introuvable")
