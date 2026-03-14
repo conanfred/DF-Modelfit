@@ -30,9 +30,39 @@
 
     <main>
     <section class="system card" id="system-card">
-      <h2 data-i18n="yourConfig">Votre configuration</h2>
+      <div class="system-header-row">
+        <h2 data-i18n="yourConfig">Votre configuration</h2>
+        <button type="button" id="btn-toggle-custom" class="btn btn-secondary btn-small" data-i18n="customProfile">Profil personnalisé</button>
+      </div>
       <div class="system-grid" id="system-grid">
         <div class="skeleton" data-i18n="loading">Chargement…</div>
+      </div>
+      <div id="custom-profile-panel" class="custom-profile-panel" hidden>
+        <div class="custom-profile-form">
+          <label>
+            <span>RAM (Go)</span>
+            <input type="number" id="custom-ram" min="1" max="2048" step="1" value="32" placeholder="32">
+          </label>
+          <label>
+            <span data-i18n="cpuCores">Cœurs CPU</span>
+            <input type="number" id="custom-cores" min="1" max="1024" step="1" value="8" placeholder="8">
+          </label>
+          <label>
+            <span>VRAM GPU (Go)</span>
+            <input type="number" id="custom-vram" min="0" max="1024" step="1" value="" placeholder="0 = pas de GPU">
+          </label>
+          <label>
+            <span>Backend</span>
+            <select id="custom-backend">
+              <option value="cpu">CPU</option>
+              <option value="cuda">CUDA (NVIDIA)</option>
+              <option value="metal">Metal (Apple)</option>
+              <option value="rocm">ROCm (AMD)</option>
+            </select>
+          </label>
+          <button type="button" id="btn-apply-custom" class="btn" data-i18n="applyCustom">Appliquer le profil</button>
+          <button type="button" id="btn-reset-custom" class="btn btn-secondary" data-i18n="resetCustom">Revenir à la détection auto</button>
+        </div>
       </div>
     </section>
 
@@ -91,7 +121,7 @@
           </div>
         </div>
         <div class="filters-actions">
-          <label class="max-models-hf-label" data-i18n-title="maxPerUsageHfTitle" title="Max max de modèles par usage (pipeline HF) : 10–500. Ex. 100 = jusqu’à 100 par type (génération, embeddings, etc.).">
+          <label class="max-models-hf-label" data-i18n-title="maxPerUsageHfTitle" title="Max max de modèles par usage (pipeline HF) : 10–500. Ex. 100 = jusqu'à 100 par type (génération, embeddings, etc.).">
             <span data-i18n="maxPerUsageHf">Max par usage (HF)</span>
             <select id="max-models-hf" aria-label="Max modèles par usage Hugging Face">
               <option value="5">5</option>
@@ -114,13 +144,19 @@
         <span class="background-refresh-msg" data-i18n="refreshBannerMsg">Mise à jour Hugging Face en arrière-plan (54 × Max)…</span>
         <span class="background-refresh-done" hidden data-i18n="refreshBannerDone">Mise à jour terminée. Liste actualisée.</span>
       </div>
-      <h2><span data-i18n="models">Modèles</span> (<span id="count">0</span>)</h2>
+      <div class="models-header-row">
+        <h2><span data-i18n="models">Modèles</span> (<span id="count">0</span>)</h2>
+        <div class="export-buttons">
+          <button type="button" id="btn-export-csv" class="btn btn-secondary btn-small" title="Export CSV">📥 CSV</button>
+          <button type="button" id="btn-export-json" class="btn btn-secondary btn-small" title="Export JSON">📥 JSON</button>
+        </div>
+      </div>
       <div class="table-wrap">
         <table class="models-table">
           <thead>
             <tr>
               <th data-i18n-title="thSelTitle" data-i18n="thSel" title="Sel.">Sel.</th>
-              <th data-i18n-title="thFitTitle" data-i18n="thFit" title="Fit d’adaptation à votre machine : Parfait (recommandé), Bon, Marginal, ou Trop juste (ne passe pas)">Fit</th>
+              <th data-i18n-title="thFitTitle" data-i18n="thFit" title="Fit d'adaptation à votre machine : Parfait (recommandé), Bon, Marginal, ou Trop juste (ne passe pas)">Fit</th>
               <th data-i18n-title="thStateTitle" data-i18n="thState" title="État">État</th>
               <th data-i18n-title="thModelTitle" data-i18n="thModel" title="Modèle">Modèle</th>
               <th data-i18n-title="thProviderTitle" data-i18n="thProvider" title="Fournisseur">Fournisseur</th>
@@ -150,19 +186,29 @@
 
     <section class="compare card" id="compare-card">
       <h2 data-i18n="compareTitle">Comparaison & graphiques</h2>
-      <p class="compare-help">Sélectionnez jusqu’à 3 modèles dans le tableau pour comparer leurs scores (Qualité, Vitesse, Fit, Contexte) et voir un exemple de snippet Python.</p>
+      <p class="compare-help" data-i18n="compareHelp">Sélectionnez jusqu'à 3 modèles dans le tableau pour comparer leurs scores (Qualité, Vitesse, Fit, Contexte) et voir un exemple de snippet Python.</p>
       <div class="compare-layout">
         <div class="compare-chart-wrap">
           <canvas id="scores-chart" data-i18n-aria-label="chartAriaLabel" aria-label="Comparaison des scores des modèles" role="img"></canvas>
         </div>
         <div class="compare-list" id="compare-list"></div>
       </div>
+      <div id="compare-table-wrap" class="compare-table-wrap" hidden>
+        <h3 data-i18n="compareTableTitle">Comparaison détaillée</h3>
+        <table class="compare-detail-table" id="compare-detail-table"></table>
+      </div>
       <div class="snippet">
         <h3 data-i18n="snippetTitle">Snippet Python pour le modèle sélectionné</h3>
-        <p class="snippet-help" data-i18n="snippetHelp">Ce code illustre comment interroger un serveur de modèle local avec le modèle choisi. Adaptez l’URL et les paramètres selon votre runtime.</p>
+        <p class="snippet-help" data-i18n="snippetHelp">Ce code illustre comment interroger un serveur de modèle local avec le modèle choisi. Adaptez l'URL et les paramètres selon votre runtime.</p>
         <pre><code id="python-snippet"></code></pre>
         <button type="button" id="btn-copy-snippet" class="btn btn-copy" data-i18n="copyCode">Copier le code</button>
       </div>
+    </section>
+
+    <section class="changelog card" id="changelog-card" hidden>
+      <h2 data-i18n="changelogTitle">Changelog des modèles</h2>
+      <p class="changelog-help" data-i18n="changelogHelp">Modèles récemment ajoutés ou mis à jour lors des dernières synchronisations Hugging Face.</p>
+      <div id="changelog-list" class="changelog-list"></div>
     </section>
 
     <section class="history card" id="history-card">
@@ -172,7 +218,7 @@
       </div>
       <p class="history-help" data-i18n="historyHelp">Chaque combinaison de filtres utilisée est sauvegardée localement dans votre navigateur. Cliquez sur une entrée pour rejouer la configuration.</p>
       <div id="history-list" class="history-list">
-        <p class="history-empty" data-i18n="historyEmpty">Aucune recommandation enregistrée pour l’instant.</p>
+        <p class="history-empty" data-i18n="historyEmpty">Aucune recommandation enregistrée pour l'instant.</p>
       </div>
     </section>
 
@@ -183,7 +229,7 @@
       <p class="footer-license" data-i18n-html="footerLicenseHtml">Licence MIT gratuite pour le public. Sociétés et usage en recherche : contacter DF AI Research. <a href="/license" rel="license" data-i18n="licenseLink">Voir la licence</a>.</p>
     </footer>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

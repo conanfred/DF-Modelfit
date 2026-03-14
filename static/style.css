@@ -742,6 +742,133 @@ body {
   }
 }
 
+/* System header row (config + custom profile toggle) */
+.system-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.system-header-row h2 { margin: 0; }
+
+/* Custom profile panel */
+.custom-profile-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.custom-profile-panel[hidden] { display: none; }
+.custom-profile-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+.custom-profile-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.custom-profile-form label span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.custom-profile-form input,
+.custom-profile-form select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  min-width: 100px;
+}
+.custom-profile-form input:focus,
+.custom-profile-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Models header (title + export) */
+.models-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.models-header-row h2 { margin: 0; }
+.export-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-small {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+/* Comparison detail table */
+.compare-table-wrap {
+  margin-top: 1.25rem;
+}
+.compare-table-wrap[hidden] { display: none; }
+.compare-table-wrap h3 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem 0;
+}
+.compare-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.compare-detail-table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.compare-detail-table td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.compare-detail-table td.metric-label {
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Changelog */
+.changelog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 20rem;
+  overflow-y: auto;
+}
+.changelog-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  padding: 0.3rem 0;
+}
+.changelog-name {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+.changelog-meta {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
 /* Impression : masquer filtres et actions, garder config + tableau + comparaison */
 @media print {
   .header-row .lang-switcher,

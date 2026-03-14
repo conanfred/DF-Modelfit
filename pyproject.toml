@@ -1,0 +1,35 @@
+[project]
+name = "df-modelfit"
+version = "1.1.0"
+description = "Outil web de recommandation de modèles LLM adaptés à votre machine (RAM, CPU, GPU)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "Usage gratuit pour le public (particuliers)"}
+authors = [{name = "DF AI Research", email = "contact@dfairesearch.com"}]
+
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.32.1",
+    "psutil==6.1.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "flake8",
+    "pytest",
+    "pytest-cov",
+    "httpx",
+    "pip-audit",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.flake8]
+max-line-length = 127
+max-complexity = 15
+extend-ignore = ["E203", "W503"]

@@ -154,6 +154,22 @@
       chartAriaLabel: "Comparaison des scores des modèles",
       errorNetwork: "Erreur réseau. Vérifiez que le serveur DF Modelfit tourne (python main.py) et que vous ouvrez http://localhost:5050",
       errorUpdateFail: "Échec de la mise à jour.",
+      customProfile: "Profil personnalisé",
+      applyCustom: "Appliquer le profil",
+      resetCustom: "Revenir à la détection auto",
+      compareTableTitle: "Comparaison détaillée",
+      changelogTitle: "Changelog des modèles",
+      changelogHelp: "Modèles récemment ajoutés ou mis à jour lors des dernières synchronisations Hugging Face.",
+      changelogEmpty: "Aucun changement récent.",
+      exportCsv: "CSV",
+      exportJson: "JSON",
+      compareMetric: "Métrique",
+      compareNoSelection: "Sélectionnez des modèles pour voir le détail.",
+      scenarioCodingLabel: "Dév. / coding",
+      scenarioChatLabel: "Chat général",
+      scenarioReasoningLabel: "Reasoning profond",
+      scenarioEdgeLabel: "Edge / léger",
+      scenarioCustomLabel: "Personnalisé",
     },
     en: {
       titlePage: "LLM model recommendation for your machine",
@@ -280,6 +296,22 @@
       chartAriaLabel: "Model scores comparison",
       errorNetwork: "Network error. Make sure the DF Modelfit server is running (python main.py) and you open http://localhost:5050",
       errorUpdateFail: "Update failed.",
+      customProfile: "Custom profile",
+      applyCustom: "Apply profile",
+      resetCustom: "Back to auto-detection",
+      compareTableTitle: "Detailed comparison",
+      changelogTitle: "Model changelog",
+      changelogHelp: "Models recently added or updated during the latest Hugging Face syncs.",
+      changelogEmpty: "No recent changes.",
+      exportCsv: "CSV",
+      exportJson: "JSON",
+      compareMetric: "Metric",
+      compareNoSelection: "Select models to see details.",
+      scenarioCodingLabel: "Dev. / coding",
+      scenarioChatLabel: "General chat",
+      scenarioReasoningLabel: "Deep reasoning",
+      scenarioEdgeLabel: "Edge / light",
+      scenarioCustomLabel: "Custom",
     },
   };
 
@@ -346,7 +378,23 @@
     scoresChart: document.getElementById("scores-chart"),
     pythonSnippet: document.getElementById("python-snippet"),
     btnCopySnippet: document.getElementById("btn-copy-snippet"),
+    btnExportCsv: document.getElementById("btn-export-csv"),
+    btnExportJson: document.getElementById("btn-export-json"),
+    btnToggleCustom: document.getElementById("btn-toggle-custom"),
+    customPanel: document.getElementById("custom-profile-panel"),
+    customRam: document.getElementById("custom-ram"),
+    customCores: document.getElementById("custom-cores"),
+    customVram: document.getElementById("custom-vram"),
+    customBackend: document.getElementById("custom-backend"),
+    btnApplyCustom: document.getElementById("btn-apply-custom"),
+    btnResetCustom: document.getElementById("btn-reset-custom"),
+    changelogCard: document.getElementById("changelog-card"),
+    changelogList: document.getElementById("changelog-list"),
+    compareTableWrap: document.getElementById("compare-table-wrap"),
+    compareDetailTable: document.getElementById("compare-detail-table"),
   };
+
+  let isCustomProfile = false;
 
   function formatLastUpdated(iso) {
     if (!iso) return "";
@@ -768,13 +816,13 @@
   }
 
   function describeScenario(scenario) {
-    if (!scenario) return "Personnalisé";
+    if (!scenario) return t("scenarioCustomLabel");
     switch (scenario) {
-      case "coding": return "Dév. / coding";
-      case "chat": return "Chat général";
-      case "reasoning": return "Reasoning profond";
-      case "edge": return "Edge / léger";
-      default: return "Personnalisé";
+      case "coding": return t("scenarioCodingLabel");
+      case "chat": return t("scenarioChatLabel");
+      case "reasoning": return t("scenarioReasoningLabel");
+      case "edge": return t("scenarioEdgeLabel");
+      default: return t("scenarioCustomLabel");
     }
   }
 
@@ -1057,6 +1105,119 @@
       ).join("");
   }
 
+  function exportFile(format) {
+    const url = `/api/export/${format}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `df_modelfit_export.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function renderCompareTable() {
+    if (!el.compareDetailTable || !el.compareTableWrap) return;
+    if (!selectedModels.length) {
+      el.compareTableWrap.hidden = true;
+      return;
+    }
+    el.compareTableWrap.hidden = false;
+    const metrics = [
+      { key: "score", label: "Score global" },
+      { key: "score_quality", label: t("chartQuality") },
+      { key: "score_speed", label: t("chartSpeed") },
+      { key: "score_fit", label: t("chartFit") },
+      { key: "score_context", label: t("chartContext") },
+      { key: "mem_requise_gb", label: t("thMem") + " (Go)" },
+      { key: "utilisation_pct", label: "Utilisation (%)" },
+      { key: "estimated_tps", label: "tok/s (est.)" },
+      { key: "eco_level", label: "Énergie" },
+      { key: "fit_level", label: t("thFit") },
+      { key: "mode", label: t("thMode") },
+    ];
+    let html = "<thead><tr><th>" + escapeHtml(t("compareMetric")) + "</th>";
+    selectedModels.forEach(function(row) {
+      const name = (row.model && row.model.name) || "?";
+      html += "<th>" + escapeHtml(name) + "</th>";
+    });
+    html += "</tr></thead><tbody>";
+    metrics.forEach(function(m) {
+      html += "<tr><td class='metric-label'>" + escapeHtml(m.label) + "</td>";
+      selectedModels.forEach(function(row) {
+        let val = row[m.key];
+        if (val == null && row.model) val = row.model[m.key];
+        html += "<td>" + escapeHtml(String(val != null ? val : "—")) + "</td>";
+      });
+      html += "</tr>";
+    });
+    html += "</tbody>";
+    el.compareDetailTable.innerHTML = html;
+  }
+
+  function toggleCustomProfile() {
+    if (!el.customPanel) return;
+    el.customPanel.hidden = !el.customPanel.hidden;
+  }
+
+  async function applyCustomProfile() {
+    const ram = parseFloat((el.customRam && el.customRam.value) || "32");
+    const cores = parseInt((el.customCores && el.customCores.value) || "8", 10);
+    const vramVal = (el.customVram && el.customVram.value) ? parseFloat(el.customVram.value) : null;
+    const backend = (el.customBackend && el.customBackend.value) || "cpu";
+    const body = {
+      total_ram_gb: ram,
+      cpu_cores: cores,
+      gpu_vram_gb: vramVal && vramVal > 0 ? vramVal : null,
+      backend: vramVal && vramVal > 0 ? backend : "cpu",
+    };
+    try {
+      const res = await fetch(API + "/system/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(res.statusText);
+      const data = await res.json();
+      isCustomProfile = true;
+      applyApiResponse(data);
+    } catch (err) {
+      alert("Erreur : " + (err.message || err));
+    }
+  }
+
+  async function resetCustomProfile() {
+    isCustomProfile = false;
+    if (el.customPanel) el.customPanel.hidden = true;
+    await fetchFullModels().catch(function() {});
+  }
+
+  async function loadChangelog() {
+    try {
+      const res = await fetch(API + "/changelog");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.entries || !data.entries.length) {
+        if (el.changelogCard) el.changelogCard.hidden = true;
+        return;
+      }
+      if (el.changelogCard) el.changelogCard.hidden = false;
+      if (el.changelogList) {
+        el.changelogList.innerHTML = data.entries.map(function(entry) {
+          const badge = entry.status === "new"
+            ? '<span class="status-badge status-new">' + escapeHtml(t("statusNew")) + '</span>'
+            : '<span class="status-badge status-updated">' + escapeHtml(t("statusUpdated")) + '</span>';
+          return '<div class="changelog-entry">' +
+            badge + ' ' +
+            '<span class="changelog-name">' + escapeHtml(entry.name) + '</span>' +
+            ' <span class="changelog-meta">' + escapeHtml(entry.provider) + ' · ' + escapeHtml(entry.parameter_count || "") + '</span>' +
+            '</div>';
+        }).join("");
+      }
+    } catch (_) {
+      if (el.changelogCard) el.changelogCard.hidden = true;
+    }
+  }
+
   function init() {
     renderUsageLegend();
     renderUsageFilterOptions();
@@ -1289,6 +1450,15 @@
         }
       });
     }
+
+    if (el.btnExportCsv) el.btnExportCsv.addEventListener("click", function() { exportFile("csv"); });
+    if (el.btnExportJson) el.btnExportJson.addEventListener("click", function() { exportFile("json"); });
+
+    if (el.btnToggleCustom) el.btnToggleCustom.addEventListener("click", toggleCustomProfile);
+    if (el.btnApplyCustom) el.btnApplyCustom.addEventListener("click", applyCustomProfile);
+    if (el.btnResetCustom) el.btnResetCustom.addEventListener("click", resetCustomProfile);
+
+    loadChangelog();
   }
 
   function renderSelectionState() {
@@ -1306,6 +1476,7 @@
       if (cb) cb.checked = isSelected;
     });
     renderCompare();
+    renderCompareTable();
     updateChart();
     updateSnippet();
   }
