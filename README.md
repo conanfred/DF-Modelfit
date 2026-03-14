@@ -129,6 +129,15 @@ Dans l’application, lien « Voir la licence » : `http://localhost:5050/licens
 
 # DF Modelfit (English)
 
+<p align="center">
+  <img src="https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=github-actions&logoColor=white" alt="CI">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Free%20for%20individuals-green" alt="License"></a>
+  <img src="https://img.shields.io/badge/python-3.9+-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Maintained%3F-yes-green" alt="Maintained">
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributions-welcome-brightgreen" alt="Contributions welcome"></a>
+</p>
+
 Personal LLM model recommendation tool. Web app to estimate which LLM models fit your machine (RAM, CPU, GPU) and compare them.
 
 - **Backend**: Python (FastAPI)
