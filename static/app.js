@@ -175,6 +175,44 @@
       localModelsTitle: "Modèles installés localement",
       installModelTitle: "Installer un modèle",
       installedBadge: "Installé",
+      chatTitle: "💬 Chat IA",
+      chatClose: "Fermer",
+      chatSelectModel: "Sélectionner un modèle…",
+      chatSettings: "⚙️ Paramètres",
+      chatPresetSystem: "Preset système",
+      chatCustomPrompt: "System prompt personnalisé",
+      chatTemperature: "Temperature",
+      chatTopP: "Top P",
+      chatTopK: "Top K",
+      chatMaxTokens: "Max tokens",
+      chatContextWindow: "Context window",
+      chatRepeatPenalty: "Repeat penalty",
+      chatSeed: "Seed",
+      chatResetDefaults: "Réinitialiser",
+      chatNewConv: "➕ Nouvelle",
+      chatConversations: "📋 Conversations",
+      chatWelcomeTitle: "Discutez avec vos modèles IA locaux",
+      chatWelcomeSub: "Sélectionnez un modèle installé via Ollama, posez vos questions, ou utilisez 📸 pour partager votre écran.",
+      chatDropImage: "Glissez-déposez une image ici",
+      chatCapture: "📸 Capture",
+      chatAttach: "📎 Joindre",
+      chatPlaceholder: "Écrivez votre message…",
+      chatSend: "Envoyer",
+      chatStop: "Arrêter",
+      chatRegenerate: "Régénérer",
+      chatGenerating: "Génération…",
+      chatCopy: "Copier",
+      chatCopied: "Copié ✓",
+      chatOllamaNotRunning: "Ollama non démarré…",
+      chatNoModels: "Aucun modèle installé",
+      chatNoConversations: "Aucune conversation",
+      chatDeleteConv: "Supprimer",
+      chatScreenCaptured: "Écran capturé !",
+      chatResetDone: "Paramètres réinitialisés",
+      chatOpenPanel: "Ouvrir le chat IA",
+      chatError: "Erreur : ",
+      chatErrorCheck: "vérifiez qu'Ollama tourne",
+      chatErrorUnknown: "inconnue",
     },
     en: {
       titlePage: "LLM model recommendation for your machine",
@@ -322,6 +360,44 @@
       localModelsTitle: "Locally installed models",
       installModelTitle: "Install a model",
       installedBadge: "Installed",
+      chatTitle: "💬 AI Chat",
+      chatClose: "Close",
+      chatSelectModel: "Select a model…",
+      chatSettings: "⚙️ Settings",
+      chatPresetSystem: "System preset",
+      chatCustomPrompt: "Custom system prompt",
+      chatTemperature: "Temperature",
+      chatTopP: "Top P",
+      chatTopK: "Top K",
+      chatMaxTokens: "Max tokens",
+      chatContextWindow: "Context window",
+      chatRepeatPenalty: "Repeat penalty",
+      chatSeed: "Seed",
+      chatResetDefaults: "Reset defaults",
+      chatNewConv: "➕ New",
+      chatConversations: "📋 Conversations",
+      chatWelcomeTitle: "Chat with your local AI models",
+      chatWelcomeSub: "Select a model via Ollama, ask questions, or use 📸 to share your screen.",
+      chatDropImage: "Drop an image here",
+      chatCapture: "📸 Capture",
+      chatAttach: "📎 Attach",
+      chatPlaceholder: "Type your message…",
+      chatSend: "Send",
+      chatStop: "Stop",
+      chatRegenerate: "Regenerate",
+      chatGenerating: "Generating…",
+      chatCopy: "Copy",
+      chatCopied: "Copied ✓",
+      chatOllamaNotRunning: "Ollama not running…",
+      chatNoModels: "No models installed",
+      chatNoConversations: "No conversations",
+      chatDeleteConv: "Delete",
+      chatScreenCaptured: "Screen captured!",
+      chatResetDone: "Settings reset",
+      chatOpenPanel: "Open AI chat",
+      chatError: "Error: ",
+      chatErrorCheck: "check that Ollama is running",
+      chatErrorUnknown: "unknown",
     },
   };
 
@@ -1686,23 +1762,17 @@
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (!data.available) {
-          modelSel.innerHTML = '<option value="">' + escapeHtml(
-            currentLang === 'en' ? 'Ollama not running…' : 'Ollama non démarré…'
-          ) + '</option>';
+          modelSel.innerHTML = '<option value="">' + escapeHtml(t('chatOllamaNotRunning')) + '</option>';
           chatModels = [];
           return;
         }
         chatModels = data.models || [];
         if (!chatModels.length) {
-          modelSel.innerHTML = '<option value="">' + escapeHtml(
-            currentLang === 'en' ? 'No models installed' : 'Aucun modèle installé'
-          ) + '</option>';
+          modelSel.innerHTML = '<option value="">' + escapeHtml(t('chatNoModels')) + '</option>';
           return;
         }
         var prev = modelSel.value;
-        var opts = '<option value="">' + escapeHtml(
-          currentLang === 'en' ? 'Select a model…' : 'Sélectionner un modèle…'
-        ) + '</option>';
+        var opts = '<option value="">' + escapeHtml(t('chatSelectModel')) + '</option>';
         chatModels.forEach(function(m) {
           var sizeTag = m.size_gb ? ' (' + m.size_gb + ' Go)' : '';
           opts += '<option value="' + escapeHtml(m.name) + '">' +
@@ -1715,9 +1785,7 @@
         onModelChange();
       })
       .catch(function() {
-        modelSel.innerHTML = '<option value="">' + escapeHtml(
-          currentLang === 'en' ? 'Connection error' : 'Erreur de connexion'
-        ) + '</option>';
+        modelSel.innerHTML = '<option value="">' + escapeHtml(t('chatOllamaNotRunning')) + '</option>';
         chatModels = [];
       });
   }
@@ -1822,33 +1890,41 @@
     return conv;
   }
 
-  function sendChatMessage() {
+  function sendChatMessage(existingConv) {
     var input = document.getElementById('chat-input');
     var modelSel = document.getElementById('chat-model-select');
-    if (!input || !modelSel || chatStreaming) return;
-    var text = input.value.trim();
-    if (!text && !chatAttachedImage) return;
-    var model = modelSel.value;
+    if (!modelSel || chatStreaming) return;
+
+    var conv = existingConv || getCurrentConversation();
+
+    if (!existingConv) {
+      if (!input) return;
+      var text = input.value.trim();
+      if (!text && !chatAttachedImage) return;
+      var model = modelSel.value;
+      if (!model) return;
+
+      if (!conv) { newConversation(); conv = getCurrentConversation(); }
+
+      var userMsg = { role: 'user', content: text || '(image)' };
+      if (chatAttachedImage) {
+        userMsg.images = [chatAttachedImage];
+        userMsg._hasImage = true;
+      }
+      conv.messages.push(userMsg);
+      if (conv.messages.length === 1) {
+        conv.title = text.slice(0, 50) || 'Image';
+      }
+      conv.model = model;
+      renderChatMessages();
+      input.value = '';
+      input.style.height = 'auto';
+      removeAttachedImage();
+      updateTokenEstimate();
+    }
+
+    var model = modelSel.value || (conv && conv.model);
     if (!model) return;
-
-    var conv = getCurrentConversation();
-    if (!conv) { newConversation(); conv = getCurrentConversation(); }
-
-    var userMsg = { role: 'user', content: text || '(image)' };
-    if (chatAttachedImage) {
-      userMsg.images = [chatAttachedImage];
-      userMsg._hasImage = true;
-    }
-    conv.messages.push(userMsg);
-    if (conv.messages.length === 1) {
-      conv.title = text.slice(0, 50) || 'Image';
-    }
-    conv.model = model;
-    renderChatMessages();
-    input.value = '';
-    input.style.height = 'auto';
-    removeAttachedImage();
-    updateTokenEstimate();
 
     chatStreaming = true;
     chatAbortController = new AbortController();
@@ -1913,7 +1989,7 @@
               try {
                 var chunk = JSON.parse(line.slice(6));
                 if (chunk.error) {
-                  assistantMsg.content += '\n[Erreur: ' + (chunk.detail || 'inconnue') + ']';
+                  assistantMsg.content += '\n[' + t('chatError') + (chunk.detail || t('chatErrorUnknown')) + ']';
                 } else if (chunk.message && chunk.message.content) {
                   assistantMsg.content += chunk.message.content;
                 }
@@ -1939,9 +2015,7 @@
       }
       conv.messages.push({
         role: 'error',
-        content: currentLang === 'en'
-          ? 'Error: ' + (err.message || 'check that Ollama is running')
-          : 'Erreur : ' + (err.message || 'vérifiez qu\'Ollama tourne'),
+        content: t('chatError') + (err.message || t('chatErrorCheck')),
       });
       chatStreaming = false;
       chatAbortController = null;
@@ -1967,103 +2041,8 @@
     if (conv.messages.length > 0) {
       var input = document.getElementById('chat-input');
       if (input) input.value = '';
-      sendChatMessage2(conv);
+      sendChatMessage(conv);
     }
-  }
-
-  function sendChatMessage2(conv) {
-    var modelSel = document.getElementById('chat-model-select');
-    if (!modelSel) return;
-    var model = modelSel.value || conv.model;
-    if (!model) return;
-
-    chatStreaming = true;
-    chatAbortController = new AbortController();
-    updateChatUI();
-
-    var systemPrompt = getSystemPrompt();
-    var messagesPayload = conv.messages.filter(function(m) {
-      return m.role === 'user' || m.role === 'assistant';
-    }).map(function(m) {
-      var entry = { role: m.role, content: m.content };
-      if (m.images) entry.images = m.images;
-      return entry;
-    });
-
-    var opts = {};
-    if (chatOptions.temperature !== undefined) opts.temperature = chatOptions.temperature;
-    if (chatOptions.top_p !== undefined) opts.top_p = chatOptions.top_p;
-    if (chatOptions.top_k !== undefined) opts.top_k = chatOptions.top_k;
-    if (chatOptions.num_predict !== undefined) opts.num_predict = chatOptions.num_predict;
-    if (chatOptions.repeat_penalty !== undefined) opts.repeat_penalty = chatOptions.repeat_penalty;
-    if (chatOptions.num_ctx !== undefined) opts.num_ctx = chatOptions.num_ctx;
-    if (chatOptions.seed && chatOptions.seed > 0) opts.seed = chatOptions.seed;
-
-    fetch(API + '/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: chatAbortController.signal,
-      body: JSON.stringify({
-        model: model, messages: messagesPayload,
-        system_prompt: systemPrompt, options: opts,
-      }),
-    })
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.body.getReader();
-    })
-    .then(function(reader) {
-      var decoder = new TextDecoder();
-      var assistantMsg = { role: 'assistant', content: '' };
-      conv.messages.push(assistantMsg);
-      chatLastStats = null;
-      renderChatMessages();
-
-      function read() {
-        return reader.read().then(function(result) {
-          if (result.done) {
-            chatStreaming = false;
-            chatAbortController = null;
-            updateChatUI();
-            saveConversations();
-            renderChatMessages();
-            return;
-          }
-          var text = decoder.decode(result.value, { stream: true });
-          var lines = text.split('\n');
-          lines.forEach(function(line) {
-            line = line.trim();
-            if (!line || line === 'data: [DONE]') return;
-            if (line.startsWith('data: ')) {
-              try {
-                var chunk = JSON.parse(line.slice(6));
-                if (chunk.error) {
-                  assistantMsg.content += '\n[Erreur: ' + (chunk.detail || 'inconnue') + ']';
-                } else if (chunk.message && chunk.message.content) {
-                  assistantMsg.content += chunk.message.content;
-                }
-                if (chunk.done) updateGenerationStats(chunk);
-                renderChatMessages();
-              } catch (_) {}
-            }
-          });
-          return read();
-        });
-      }
-      return read();
-    })
-    .catch(function(err) {
-      if (err.name !== 'AbortError') {
-        conv.messages.push({
-          role: 'error',
-          content: 'Erreur : ' + (err.message || 'inconnue'),
-        });
-      }
-      chatStreaming = false;
-      chatAbortController = null;
-      updateChatUI();
-      renderChatMessages();
-    });
   }
 
   function renderChatMessages() {
@@ -2075,10 +2054,8 @@
     if (!messages.length) {
       container.innerHTML =
         '<div class="chat-welcome">' +
-          '<p><strong>' + escapeHtml(currentLang === 'en' ? 'Chat with your local AI models' : 'Discutez avec vos modèles IA locaux') + '</strong></p>' +
-          '<p class="chat-welcome-sub">' + escapeHtml(currentLang === 'en'
-            ? 'Select a model installed via Ollama, ask questions, or use 📸 to share your screen with a vision model.'
-            : 'Sélectionnez un modèle installé via Ollama, posez vos questions, ou utilisez 📸 pour partager votre écran avec un modèle vision.') + '</p>' +
+          '<p><strong>' + escapeHtml(t('chatWelcomeTitle')) + '</strong></p>' +
+          '<p class="chat-welcome-sub">' + escapeHtml(t('chatWelcomeSub')) + '</p>' +
         '</div>';
       return;
     }
@@ -2103,9 +2080,7 @@
     }).join('');
 
     if (chatStreaming) {
-      html += '<div class="chat-typing">' + escapeHtml(
-        currentLang === 'en' ? 'Generating…' : 'Génération…'
-      ) + '</div>';
+      html += '<div class="chat-typing">' + escapeHtml(t('chatGenerating')) + '</div>';
     }
     container.innerHTML = html;
     container.scrollTop = container.scrollHeight;
@@ -2122,10 +2097,34 @@
     escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
     escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-    escaped = escaped.replace(/^(\d+)\.\s+(.+)/gm, '<li>$2</li>');
-    escaped = escaped.replace(/^[-*]\s+(.+)/gm, '<li>$1</li>');
-    escaped = escaped.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
-    escaped = escaped.replace(/<\/ul>\s*<ul>/g, '');
+    var lines = escaped.split('\n');
+    var result = [];
+    var i = 0;
+    while (i < lines.length) {
+      var ulMatch = lines[i].match(/^[-*]\s+(.+)/);
+      if (ulMatch) {
+        var items = [];
+        while (i < lines.length && (ulMatch = lines[i].match(/^[-*]\s+(.+)/))) {
+          items.push('<li>' + ulMatch[1] + '</li>');
+          i++;
+        }
+        result.push('<ul>' + items.join('') + '</ul>');
+        continue;
+      }
+      var olMatch = lines[i].match(/^\d+\.\s+(.+)/);
+      if (olMatch) {
+        var items = [];
+        while (i < lines.length && (olMatch = lines[i].match(/^\d+\.\s+(.+)/))) {
+          items.push('<li>' + olMatch[1] + '</li>');
+          i++;
+        }
+        result.push('<ol>' + items.join('') + '</ol>');
+        continue;
+      }
+      result.push(lines[i]);
+      i++;
+    }
+    escaped = result.join('\n');
     escaped = escaped.replace(/\n/g, '<br>');
     return escaped;
   }
@@ -2136,14 +2135,14 @@
       if (pre.querySelector('.chat-code-copy-btn')) return;
       var btn = document.createElement('button');
       btn.className = 'chat-code-copy-btn';
-      btn.textContent = 'Copy';
+      btn.textContent = t('chatCopy');
       btn.type = 'button';
       btn.addEventListener('click', function() {
         var code = pre.querySelector('code');
         var txt = code ? code.textContent : pre.textContent;
         navigator.clipboard.writeText(txt).then(function() {
-          btn.textContent = '✓';
-          setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
+          btn.textContent = t('chatCopied');
+          setTimeout(function() { btn.textContent = t('chatCopy'); }, 1500);
         });
       });
       pre.style.position = 'relative';
@@ -2205,7 +2204,7 @@
       if (chatPanel) chatPanel.style.visibility = '';
       chatAttachedImage = canvas.toDataURL('image/png').split(',')[1];
       showImagePreview();
-      showToast(currentLang === 'en' ? 'Screen captured!' : 'Écran capturé !', 'success');
+      showToast(t('chatScreenCaptured'), 'success');
     }).catch(function(err) {
       if (chatPanel) chatPanel.style.visibility = '';
       showToast('Erreur capture : ' + err.message, 'error');
@@ -2229,11 +2228,23 @@
     reader.readAsDataURL(file);
   }
 
+  function detectImageMime(b64) {
+    if (!b64) return 'image/png';
+    if (b64.indexOf('/9j/') === 0 || b64.indexOf('/9j/') !== -1 && b64.indexOf('/9j/') < 4) return 'image/jpeg';
+    if (b64.indexOf('iVBOR') === 0) return 'image/png';
+    if (b64.indexOf('R0lGOD') === 0) return 'image/gif';
+    if (b64.indexOf('UklGR') === 0) return 'image/webp';
+    return 'image/png';
+  }
+
   function showImagePreview() {
     var preview = document.getElementById('chat-image-preview');
     var img = document.getElementById('chat-preview-img');
     if (preview) preview.hidden = false;
-    if (img && chatAttachedImage) img.src = 'data:image/png;base64,' + chatAttachedImage;
+    if (img && chatAttachedImage) {
+      var mime = detectImageMime(chatAttachedImage);
+      img.src = 'data:' + mime + ';base64,' + chatAttachedImage;
+    }
   }
 
   function removeAttachedImage() {
@@ -2245,7 +2256,7 @@
   function newConversation() {
     var conv = {
       id: 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      title: currentLang === 'en' ? 'New conversation' : 'Nouvelle conversation',
+      title: t('chatNewConv'),
       messages: [],
       createdAt: new Date().toISOString(),
       model: ''
@@ -2295,7 +2306,7 @@
     var list = document.getElementById('chat-conversations-list');
     if (!list) return;
     if (!chatConversations.length) {
-      list.innerHTML = '<div style="padding:0.5rem 1rem;font-size:0.8rem;color:var(--text-muted)">Aucune conversation</div>';
+      list.innerHTML = '<div style="padding:0.5rem 1rem;font-size:0.8rem;color:var(--text-muted)">' + escapeHtml(t('chatNoConversations')) + '</div>';
       return;
     }
     list.innerHTML = chatConversations.map(function(c) {
@@ -2305,7 +2316,7 @@
       return '<div class="chat-convo-item' + activeClass + '" data-convo-id="' + c.id + '">' +
         '<span class="chat-convo-date">' + escapeHtml(dateStr) + '</span>' +
         '<span class="chat-convo-title">' + escapeHtml(c.title) + '</span>' +
-        '<button type="button" class="chat-convo-delete" data-delete-id="' + c.id + '" title="Supprimer">🗑️</button>' +
+        '<button type="button" class="chat-convo-delete" data-delete-id="' + c.id + '" title="' + escapeHtml(t('chatDeleteConv')) + '">🗑️</button>' +
         '</div>';
     }).join('');
 
@@ -2326,13 +2337,24 @@
   function saveConversations() {
     try {
       var toSave = chatConversations.map(function(c) {
+        var msgs = c.messages.slice(-20);
+        var lastImageIdx = -1;
+        for (var i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].images && msgs[i].images.length > 0) {
+            lastImageIdx = i;
+            break;
+          }
+        }
         return {
           id: c.id, title: c.title, createdAt: c.createdAt, model: c.model,
-          messages: c.messages.map(function(m) {
+          messages: msgs.map(function(m, idx) {
             var entry = { role: m.role, content: m.content };
             if (m._hasImage) entry._hasImage = true;
+            if (m.images && m.images.length > 0 && idx === lastImageIdx) {
+              entry.images = m.images;
+            }
             return entry;
-          }).slice(-100)
+          })
         };
       }).slice(0, 50);
       localStorage.setItem(CONVOS_KEY, JSON.stringify(toSave));
@@ -2373,7 +2395,7 @@
       };
     }
     applyOptionsToUI();
-    showToast(currentLang === 'en' ? 'Reset to defaults' : 'Paramètres réinitialisés', 'success');
+    showToast(t('chatResetDone'), 'success');
   }
 
   function applyOptionsToUI() {

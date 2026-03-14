@@ -3,7 +3,6 @@ import json
 import logging
 import urllib.request
 import urllib.error
-from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
@@ -86,34 +85,6 @@ SYSTEM_PRESETS = {
 }
 
 
-@dataclass
-class ChatOptions:
-    """Paramètres de génération Ollama."""
-    temperature: float = 0.7
-    top_p: float = 0.9
-    top_k: int = 40
-    num_predict: int = 2048
-    repeat_penalty: float = 1.1
-    seed: int = 0
-    num_ctx: int = 4096
-    stop: list[str] = field(default_factory=list)
-
-    def to_dict(self) -> dict:
-        d: dict = {
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "top_k": self.top_k,
-            "num_predict": self.num_predict,
-            "repeat_penalty": self.repeat_penalty,
-            "num_ctx": self.num_ctx,
-        }
-        if self.seed > 0:
-            d["seed"] = self.seed
-        if self.stop:
-            d["stop"] = self.stop
-        return d
-
-
 def ollama_chat_stream(
     model: str,
     messages: list[dict],
@@ -164,38 +135,6 @@ def ollama_chat_stream(
     except Exception as e:
         logger.error("Ollama chat failed: %s", e)
         yield {"error": True, "message": {"content": ""}, "detail": str(e)}
-
-
-def ollama_chat_sync(
-    model: str,
-    messages: list[dict],
-    system_prompt: str | None = None,
-    options: dict | None = None,
-) -> dict:
-    """Chat non-streaming."""
-    payload: dict = {
-        "model": model, "messages": [], "stream": False,
-    }
-    if options:
-        payload["options"] = options
-    if system_prompt:
-        payload["messages"].append({"role": "system", "content": system_prompt})
-    for msg in messages:
-        entry: dict = {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-        if msg.get("images"):
-            entry["images"] = msg["images"]
-        payload["messages"].append(entry)
-
-    data = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        f"{OLLAMA_API}/api/chat", data=data,
-        headers={"Content-Type": "application/json"}, method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=600) as resp:
-            return json.loads(resp.read().decode())
-    except Exception as e:
-        return {"error": True, "detail": str(e)}
 
 
 def ollama_is_available() -> bool:
