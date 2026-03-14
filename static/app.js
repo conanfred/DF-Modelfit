@@ -1552,6 +1552,331 @@
   window._dfPullModel = function(n) { installModel(n); };
   window._dfDeleteModel = function(n) { deleteModel(n); };
 
+  // ── Chat Panel ────────────────────────────────────────────────────
+  var chatHistory = [];
+  var chatScreenshotBase64 = null;
+  var chatStreaming = false;
+  var CHAT_HISTORY_KEY = 'df_modelfit_chat_v1';
+
+  function initChat() {
+    var panel = document.getElementById('chat-panel');
+    var toggle = document.getElementById('btn-chat-toggle');
+    var closeBtn = document.getElementById('btn-chat-close');
+    var form = document.getElementById('chat-input-form');
+    var input = document.getElementById('chat-input');
+    var sendBtn = document.getElementById('btn-chat-send');
+    var modelSel = document.getElementById('chat-model-select');
+    var screenshotBtn = document.getElementById('btn-chat-screenshot');
+    var clearBtn = document.getElementById('btn-chat-clear');
+    var removeScreenBtn = document.getElementById('btn-chat-remove-screenshot');
+
+    if (toggle) toggle.addEventListener('click', function() {
+      if (panel) {
+        panel.hidden = !panel.hidden;
+        if (!panel.hidden) {
+          loadChatModels();
+          if (input) input.focus();
+        }
+      }
+    });
+    if (closeBtn && panel) closeBtn.addEventListener('click', function() {
+      panel.hidden = true;
+    });
+
+    if (modelSel) modelSel.addEventListener('change', function() {
+      var enabled = !!modelSel.value;
+      if (input) input.disabled = !enabled;
+      if (sendBtn) sendBtn.disabled = !enabled;
+      updateVisionBadge();
+    });
+
+    if (form) form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      sendChatMessage();
+    });
+
+    if (input) input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    });
+
+    if (screenshotBtn) screenshotBtn.addEventListener('click', captureScreen);
+    if (clearBtn) clearBtn.addEventListener('click', clearChat);
+    if (removeScreenBtn) removeScreenBtn.addEventListener('click', removeChatScreenshot);
+
+    loadChatHistory();
+    renderChatMessages();
+  }
+
+  function loadChatModels() {
+    var modelSel = document.getElementById('chat-model-select');
+    if (!modelSel) return;
+    fetch(API + '/chat/models')
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (!data.available) {
+          modelSel.innerHTML = '<option value="">' + escapeHtml(
+            currentLang === 'en' ? 'Ollama not running…' : 'Ollama non démarré…'
+          ) + '</option>';
+          return;
+        }
+        var models = data.models || [];
+        if (!models.length) {
+          modelSel.innerHTML = '<option value="">' + escapeHtml(
+            currentLang === 'en' ? 'No models installed' : 'Aucun modèle installé'
+          ) + '</option>';
+          return;
+        }
+        var opts = '<option value="">' + escapeHtml(
+          currentLang === 'en' ? 'Select a model…' : 'Sélectionner un modèle…'
+        ) + '</option>';
+        models.forEach(function(m) {
+          var visionTag = m.supports_vision ? ' 👁️' : '';
+          var sizeTag = m.size_gb ? ' (' + m.size_gb + ' Go)' : '';
+          opts += '<option value="' + escapeHtml(m.name) + '"' +
+            ' data-vision="' + (m.supports_vision ? '1' : '0') + '">' +
+            escapeHtml(m.name) + sizeTag + visionTag + '</option>';
+        });
+        modelSel.innerHTML = opts;
+      })
+      .catch(function() {
+        modelSel.innerHTML = '<option value="">' + escapeHtml(
+          currentLang === 'en' ? 'Connection error' : 'Erreur de connexion'
+        ) + '</option>';
+      });
+  }
+
+  function updateVisionBadge() {
+    var modelSel = document.getElementById('chat-model-select');
+    var badge = document.getElementById('chat-vision-badge');
+    if (!modelSel || !badge) return;
+    var opt = modelSel.options[modelSel.selectedIndex];
+    var isVision = opt && opt.getAttribute('data-vision') === '1';
+    badge.hidden = !isVision;
+  }
+
+  function sendChatMessage() {
+    var input = document.getElementById('chat-input');
+    var modelSel = document.getElementById('chat-model-select');
+    if (!input || !modelSel || chatStreaming) return;
+    var text = input.value.trim();
+    if (!text && !chatScreenshotBase64) return;
+    var model = modelSel.value;
+    if (!model) return;
+
+    var userMsg = { role: 'user', content: text || '(image)' };
+    if (chatScreenshotBase64) {
+      userMsg.images = [chatScreenshotBase64];
+      userMsg._hasImage = true;
+    }
+    chatHistory.push(userMsg);
+    renderChatMessages();
+    input.value = '';
+    removeChatScreenshot();
+
+    chatStreaming = true;
+    updateChatUI();
+
+    var systemPrompt = build_screen_context_prompt_js();
+    var messagesPayload = chatHistory.map(function(m) {
+      var entry = { role: m.role, content: m.content };
+      if (m.images) entry.images = m.images;
+      return entry;
+    });
+
+    fetch(API + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model,
+        messages: messagesPayload,
+        system_prompt: systemPrompt,
+      }),
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.body.getReader();
+    })
+    .then(function(reader) {
+      var decoder = new TextDecoder();
+      var assistantMsg = { role: 'assistant', content: '' };
+      chatHistory.push(assistantMsg);
+      renderChatMessages();
+
+      function read() {
+        return reader.read().then(function(result) {
+          if (result.done) {
+            chatStreaming = false;
+            updateChatUI();
+            saveChatHistory();
+            return;
+          }
+          var text = decoder.decode(result.value, { stream: true });
+          var lines = text.split('\n');
+          lines.forEach(function(line) {
+            line = line.trim();
+            if (!line || line === 'data: [DONE]') return;
+            if (line.startsWith('data: ')) {
+              try {
+                var chunk = JSON.parse(line.slice(6));
+                if (chunk.error) {
+                  assistantMsg.content += '\n[Erreur: ' + (chunk.detail || 'inconnue') + ']';
+                } else if (chunk.message && chunk.message.content) {
+                  assistantMsg.content += chunk.message.content;
+                }
+                renderChatMessages();
+              } catch (_) {}
+            }
+          });
+          return read();
+        });
+      }
+      return read();
+    })
+    .catch(function(err) {
+      chatHistory.push({
+        role: 'error',
+        content: currentLang === 'en'
+          ? 'Error: ' + (err.message || 'check that Ollama is running')
+          : 'Erreur : ' + (err.message || 'vérifiez qu\'Ollama tourne'),
+      });
+      chatStreaming = false;
+      updateChatUI();
+      renderChatMessages();
+    });
+  }
+
+  function build_screen_context_prompt_js() {
+    if (currentLang === 'en') {
+      return 'You are a helpful AI assistant integrated into DF Modelfit, an LLM model recommendation tool. The user may share screenshots. Analyze the content and help them. Be concise.';
+    }
+    return 'Tu es un assistant IA intégré à DF Modelfit, un outil de recommandation de modèles LLM. L\'utilisateur peut partager des captures d\'écran. Analyse le contenu et aide-le. Sois concis et utile.';
+  }
+
+  function renderChatMessages() {
+    var container = document.getElementById('chat-messages');
+    if (!container) return;
+    if (!chatHistory.length) {
+      container.innerHTML =
+        '<div class="chat-welcome">' +
+          '<p><strong>' + escapeHtml(currentLang === 'en' ? 'Chat with your local AI models' : 'Discutez avec vos modèles IA locaux') + '</strong></p>' +
+          '<p class="chat-welcome-sub">' + escapeHtml(currentLang === 'en'
+            ? 'Select a model installed via Ollama, ask questions, or use 📸 to share your screen with a vision model.'
+            : 'Sélectionnez un modèle installé via Ollama, posez vos questions, ou utilisez 📸 pour partager votre écran avec un modèle vision.') + '</p>' +
+        '</div>';
+      return;
+    }
+    container.innerHTML = chatHistory.map(function(msg) {
+      if (msg.role === 'error') {
+        return '<div class="chat-bubble chat-bubble-error">' + escapeHtml(msg.content) + '</div>';
+      }
+      var cls = msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant';
+      var imgHtml = '';
+      if (msg._hasImage && msg.images && msg.images[0]) {
+        imgHtml = '<img class="chat-bubble-img" src="data:image/png;base64,' + msg.images[0].slice(0, 100) + '…" alt="Screenshot" />';
+        imgHtml = '<img class="chat-bubble-img" src="data:image/png;base64,' + msg.images[0] + '" alt="Screenshot" />';
+      }
+      var contentHtml = msg.role === 'assistant'
+        ? formatAssistantContent(msg.content)
+        : escapeHtml(msg.content);
+      return '<div class="chat-bubble ' + cls + '">' + imgHtml + contentHtml + '</div>';
+    }).join('');
+    if (chatStreaming) {
+      container.innerHTML += '<div class="chat-typing">' + escapeHtml(
+        currentLang === 'en' ? 'Generating…' : 'Génération…'
+      ) + '</div>';
+    }
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function formatAssistantContent(text) {
+    if (!text) return '';
+    var escaped = escapeHtml(text);
+    escaped = escaped.replace(/```(\w*)\n?([\s\S]*?)```/g, function(_, lang, code) {
+      return '<pre><code>' + code + '</code></pre>';
+    });
+    escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+    escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    escaped = escaped.replace(/\n/g, '<br>');
+    return escaped;
+  }
+
+  function updateChatUI() {
+    var input = document.getElementById('chat-input');
+    var sendBtn = document.getElementById('btn-chat-send');
+    if (input) input.disabled = chatStreaming;
+    if (sendBtn) sendBtn.disabled = chatStreaming;
+  }
+
+  function captureScreen() {
+    if (typeof html2canvas !== 'function') {
+      if (typeof showToast === 'function') showToast('html2canvas non chargé', 'error');
+      return;
+    }
+    var chatPanel = document.getElementById('chat-panel');
+    if (chatPanel) chatPanel.style.display = 'none';
+
+    html2canvas(document.body, {
+      scale: 0.5,
+      useCORS: true,
+      logging: false,
+      windowWidth: document.body.scrollWidth,
+      windowHeight: document.body.scrollHeight,
+    }).then(function(canvas) {
+      if (chatPanel) chatPanel.style.display = '';
+      chatScreenshotBase64 = canvas.toDataURL('image/png').split(',')[1];
+      var preview = document.getElementById('chat-screenshot-preview');
+      var previewImg = document.getElementById('chat-screenshot-img');
+      if (preview) preview.hidden = false;
+      if (previewImg) previewImg.src = 'data:image/png;base64,' + chatScreenshotBase64;
+      if (typeof showToast === 'function') showToast(
+        currentLang === 'en' ? 'Screen captured!' : 'Écran capturé !', 'success'
+      );
+    }).catch(function(err) {
+      if (chatPanel) chatPanel.style.display = '';
+      if (typeof showToast === 'function') showToast('Erreur capture : ' + err.message, 'error');
+    });
+  }
+
+  function removeChatScreenshot() {
+    chatScreenshotBase64 = null;
+    var preview = document.getElementById('chat-screenshot-preview');
+    if (preview) preview.hidden = true;
+  }
+
+  function clearChat() {
+    chatHistory = [];
+    chatScreenshotBase64 = null;
+    removeChatScreenshot();
+    renderChatMessages();
+    try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch (_) {}
+  }
+
+  function saveChatHistory() {
+    try {
+      var toSave = chatHistory.map(function(m) {
+        var entry = { role: m.role, content: m.content };
+        if (m._hasImage) entry._hasImage = true;
+        return entry;
+      });
+      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(toSave.slice(-50)));
+    } catch (_) {}
+  }
+
+  function loadChatHistory() {
+    try {
+      var raw = localStorage.getItem(CHAT_HISTORY_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) chatHistory = parsed;
+      }
+    } catch (_) {
+      chatHistory = [];
+    }
+  }
+
   function initRuntimes() {
     var btnRefresh = document.getElementById('btn-refresh-runtimes');
     if (btnRefresh) btnRefresh.addEventListener('click', loadRuntimes);
@@ -1879,6 +2204,7 @@
 
     loadChangelog();
     initRuntimes();
+    initChat();
   }
 
   function renderSelectionState() {

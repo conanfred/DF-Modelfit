@@ -299,7 +299,43 @@
       <p class="footer-license" data-i18n-html="footerLicenseHtml">Licence MIT gratuite pour le public. Sociétés et usage en recherche : contacter DF AI Research. <a href="/license" rel="license" data-i18n="licenseLink">Voir la licence</a>.</p>
     </footer>
   </div>
+  <!-- Chat Panel -->
+  <div id="chat-panel" class="chat-panel" hidden>
+    <div class="chat-panel-header">
+      <div class="chat-panel-title-row">
+        <h3>💬 Chat IA</h3>
+        <button type="button" id="btn-chat-close" class="btn-chat-close" title="Fermer">✕</button>
+      </div>
+      <div class="chat-model-select-row">
+        <select id="chat-model-select" class="chat-model-select">
+          <option value="">Sélectionner un modèle…</option>
+        </select>
+        <span id="chat-vision-badge" class="chat-vision-badge" hidden title="Ce modèle supporte la vision (images)">👁️ Vision</span>
+      </div>
+      <div class="chat-actions-row">
+        <button type="button" id="btn-chat-screenshot" class="btn btn-small btn-secondary" title="Capturer l'écran et envoyer à l'IA">📸 Capture écran</button>
+        <button type="button" id="btn-chat-clear" class="btn btn-small btn-secondary" title="Effacer la conversation">🗑️ Effacer</button>
+      </div>
+    </div>
+    <div id="chat-messages" class="chat-messages" role="log" aria-live="polite">
+      <div class="chat-welcome">
+        <p><strong>Discutez avec vos modèles IA locaux</strong></p>
+        <p class="chat-welcome-sub">Sélectionnez un modèle installé via Ollama, posez vos questions, ou utilisez 📸 pour partager votre écran avec un modèle vision.</p>
+      </div>
+    </div>
+    <div id="chat-screenshot-preview" class="chat-screenshot-preview" hidden>
+      <img id="chat-screenshot-img" alt="Capture d'écran" />
+      <button type="button" id="btn-chat-remove-screenshot" class="btn-chat-remove-screenshot" title="Retirer la capture">✕</button>
+    </div>
+    <form id="chat-input-form" class="chat-input-form">
+      <textarea id="chat-input" class="chat-input" rows="2" placeholder="Écrivez votre message…" disabled></textarea>
+      <button type="submit" id="btn-chat-send" class="btn btn-chat-send" disabled title="Envoyer">➤</button>
+    </form>
+  </div>
+  <button type="button" id="btn-chat-toggle" class="btn-chat-toggle" title="Ouvrir le chat IA">💬</button>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

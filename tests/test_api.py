@@ -194,3 +194,26 @@ class TestRuntimesEndpoints:
             json={"name": ""},
         )
         assert resp.status_code == 422
+
+
+class TestChatEndpoints:
+    def test_chat_models(self):
+        resp = client.get("/api/chat/models")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "available" in data
+        assert "models" in data
+
+    def test_chat_requires_model(self):
+        resp = client.post(
+            "/api/chat",
+            json={"model": "", "messages": [{"role": "user", "content": "hi"}]},
+        )
+        assert resp.status_code == 422
+
+    def test_chat_requires_messages(self):
+        resp = client.post(
+            "/api/chat",
+            json={"model": "llama3", "messages": []},
+        )
+        assert resp.status_code == 422

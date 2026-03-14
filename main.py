@@ -29,6 +29,12 @@ from api.runtimes import (
     ollama_model_info,
     ollama_running_models,
 )
+from api.chat import (
+    ollama_chat_stream,
+    ollama_is_available,
+    ollama_list_chat_models,
+    build_screen_context_prompt,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -704,6 +710,55 @@ def api_runtimes_model_info(name: str):
     if info is None:
         raise HTTPException(404, f"Modèle {name} non trouvé.")
     return info
+
+
+# ---------------------------------------------------------------------------
+# Chat endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/chat/models")
+def api_chat_models():
+    """Liste les modèles disponibles pour le chat."""
+    available = ollama_is_available()
+    models = ollama_list_chat_models() if available else []
+    return {
+        "available": available,
+        "models": models,
+    }
+
+
+@app.post("/api/chat")
+async def api_chat(request: Request):
+    """Chat streaming avec un modèle Ollama (SSE)."""
+    body = await request.json()
+    model = body.get("model", "").strip()
+    messages = body.get("messages", [])
+    system_prompt = body.get("system_prompt")
+    if not model:
+        raise HTTPException(422, "Le nom du modèle est requis.")
+    if not messages:
+        raise HTTPException(422, "Au moins un message est requis.")
+
+    import asyncio
+
+    async def generate():
+        loop = asyncio.get_event_loop()
+        chunks = await loop.run_in_executor(
+            None,
+            lambda: list(ollama_chat_stream(model, messages, system_prompt)),
+        )
+        for chunk in chunks:
+            yield f"data: {json.dumps(chunk)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
