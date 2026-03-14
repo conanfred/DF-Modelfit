@@ -215,6 +215,63 @@
       </div>
     </section>
 
+    <section class="runtimes card" id="runtimes-card">
+      <div class="runtimes-header-row">
+        <h2 data-i18n="runtimesTitle">IA locales installées</h2>
+        <button type="button" id="btn-refresh-runtimes" class="btn btn-secondary btn-small">🔄 Actualiser</button>
+      </div>
+      <p class="runtimes-help" data-i18n="runtimesHelp">Détection automatique des runtimes IA (Ollama, LM Studio, llama.cpp). Gérez vos modèles locaux : installer, mettre à jour ou supprimer.</p>
+
+      <div id="runtimes-status" class="runtimes-status">
+        <div class="skeleton">Détection en cours…</div>
+      </div>
+
+      <div id="local-models-section" class="local-models-section" hidden>
+        <div class="local-models-header">
+          <h3 data-i18n="localModelsTitle">Modèles installés localement</h3>
+          <span id="local-models-count" class="badge-count">0</span>
+        </div>
+        <div class="local-models-table-wrap">
+          <table class="local-models-table">
+            <thead>
+              <tr>
+                <th>Modèle</th>
+                <th>Runtime</th>
+                <th>Taille</th>
+                <th>Quantification</th>
+                <th>Famille</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="local-models-tbody">
+              <tr><td colspan="6" class="loading">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="install-model-section" class="install-model-section">
+        <h3 data-i18n="installModelTitle">Installer un modèle</h3>
+        <div class="install-model-form">
+          <input type="text" id="install-model-name" placeholder="ex. llama3.2:3b, qwen2.5:7b, mistral:7b" class="install-model-input">
+          <button type="button" id="btn-install-model" class="btn">Installer via Ollama</button>
+        </div>
+        <div class="install-suggestions">
+          <span class="install-suggestions-label">Suggestions :</span>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="llama3.2:3b">llama3.2:3b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="qwen2.5:7b">qwen2.5:7b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="mistral:7b">mistral:7b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="phi3.5:3.8b">phi3.5:3.8b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="gemma2:2b">gemma2:2b</button>
+          <button type="button" class="btn btn-small btn-secondary install-suggestion" data-model="deepseek-r1:8b">deepseek-r1:8b</button>
+        </div>
+        <div id="install-progress" class="install-progress" hidden>
+          <div class="install-progress-bar"></div>
+          <span class="install-progress-text">Installation en cours…</span>
+        </div>
+      </div>
+    </section>
+
     <section class="changelog card" id="changelog-card" hidden>
       <h2 data-i18n="changelogTitle">Changelog des modèles</h2>
       <p class="changelog-help" data-i18n="changelogHelp">Modèles récemment ajoutés ou mis à jour lors des dernières synchronisations Hugging Face.</p>

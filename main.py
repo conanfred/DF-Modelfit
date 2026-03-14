@@ -20,6 +20,15 @@ from pydantic import BaseModel, Field
 from api.system import detect, detect_custom
 from api.fit import analyser, to_dict
 from api.huggingface import fetch_models_from_hf
+from api.runtimes import (
+    detect_all_runtimes,
+    list_all_local_models,
+    match_local_to_hf,
+    ollama_pull_model,
+    ollama_delete_model,
+    ollama_model_info,
+    ollama_running_models,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -625,6 +634,76 @@ def api_changelog():
             })
     entries.sort(key=lambda x: x.get("updated_at") or "", reverse=True)
     return {"entries": entries[:50], "last_updated": last}
+
+
+# ---------------------------------------------------------------------------
+# Runtime management endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/runtimes")
+def api_runtimes():
+    """Détecte les runtimes IA installés (Ollama, LM Studio, llama.cpp)."""
+    runtimes = detect_all_runtimes()
+    local_models = list_all_local_models()
+    matched = match_local_to_hf(local_models, MODELS)
+    return {
+        "runtimes": runtimes,
+        "local_models": local_models,
+        "local_count": len(local_models),
+        "matched_count": len(matched),
+    }
+
+
+@app.get("/api/runtimes/models")
+def api_runtimes_models():
+    """Liste tous les modèles installés localement."""
+    local_models = list_all_local_models()
+    matched = match_local_to_hf(local_models, MODELS)
+    return {
+        "models": local_models,
+        "matched": {k: v for k, v in matched.items()},
+    }
+
+
+@app.get("/api/runtimes/running")
+def api_runtimes_running():
+    """Liste les modèles actuellement chargés en mémoire."""
+    return {"models": ollama_running_models()}
+
+
+@app.post("/api/runtimes/install")
+async def api_runtimes_install(request: Request):
+    """Installe (pull) un modèle dans Ollama."""
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(422, "Le nom du modèle est requis.")
+    import asyncio
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, ollama_pull_model, name)
+    logger.info("Install model %s: %s", name, result)
+    return result
+
+
+@app.post("/api/runtimes/delete")
+async def api_runtimes_delete(request: Request):
+    """Supprime un modèle d'Ollama."""
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(422, "Le nom du modèle est requis.")
+    result = ollama_delete_model(name)
+    logger.info("Delete model %s: %s", name, result)
+    return result
+
+
+@app.get("/api/runtimes/model/{name:path}")
+def api_runtimes_model_info(name: str):
+    """Détails d'un modèle Ollama installé."""
+    info = ollama_model_info(name)
+    if info is None:
+        raise HTTPException(404, f"Modèle {name} non trouvé.")
+    return info
 
 
 # ---------------------------------------------------------------------------

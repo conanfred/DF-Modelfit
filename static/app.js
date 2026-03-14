@@ -170,6 +170,11 @@
       scenarioReasoningLabel: "Reasoning profond",
       scenarioEdgeLabel: "Edge / léger",
       scenarioCustomLabel: "Personnalisé",
+      runtimesTitle: "IA locales installées",
+      runtimesHelp: "Détection automatique des runtimes IA (Ollama, LM Studio, llama.cpp). Gérez vos modèles locaux : installer, mettre à jour ou supprimer.",
+      localModelsTitle: "Modèles installés localement",
+      installModelTitle: "Installer un modèle",
+      installedBadge: "Installé",
     },
     en: {
       titlePage: "LLM model recommendation for your machine",
@@ -312,6 +317,11 @@
       scenarioReasoningLabel: "Deep reasoning",
       scenarioEdgeLabel: "Edge / light",
       scenarioCustomLabel: "Custom",
+      runtimesTitle: "Local AI runtimes",
+      runtimesHelp: "Auto-detection of AI runtimes (Ollama, LM Studio, llama.cpp). Manage your local models: install, update, or delete.",
+      localModelsTitle: "Locally installed models",
+      installModelTitle: "Install a model",
+      installedBadge: "Installed",
     },
   };
 
@@ -1403,6 +1413,175 @@
     });
   }
 
+  // ── Runtimes / Local AI management ─────────────────────────────────
+  var localModelsCache = [];
+  var localMatchedCache = {};
+
+  async function loadRuntimes() {
+    var statusEl = document.getElementById('runtimes-status');
+    if (!statusEl) return;
+    try {
+      var res = await fetch(API + '/runtimes');
+      if (!res.ok) throw new Error(res.statusText);
+      var data = await res.json();
+      renderRuntimesStatus(data.runtimes);
+      localModelsCache = data.local_models || [];
+      renderLocalModels(localModelsCache);
+      refreshLocalMatches();
+    } catch (err) {
+      statusEl.innerHTML = '<div class="runtime-card"><span class="runtime-card-name">Détection impossible</span><span class="runtime-card-error">' + escapeHtml(err.message) + '</span></div>';
+    }
+  }
+
+  function renderRuntimesStatus(runtimes) {
+    var statusEl = document.getElementById('runtimes-status');
+    if (!statusEl || !runtimes) return;
+    statusEl.innerHTML = runtimes.map(function(rt) {
+      var dotClass = rt.running ? 'running' : (rt.installed ? 'installed' : 'not-found');
+      var statusLabel = rt.running ? (currentLang === 'en' ? 'Running' : 'En cours') : (rt.installed ? (currentLang === 'en' ? 'Installed (stopped)' : 'Installé (arrêté)') : (currentLang === 'en' ? 'Not found' : 'Non trouvé'));
+      var versionText = rt.version ? 'v' + escapeHtml(rt.version) : '';
+      var modelsText = rt.running ? (rt.models_count + (currentLang === 'en' ? ' model(s)' : ' modèle(s)')) : '';
+      var metaParts = [statusLabel, versionText, modelsText].filter(Boolean).join(' · ');
+      var errorHtml = rt.error ? '<span class="runtime-card-error">' + escapeHtml(rt.error) + '</span>' : '';
+      return '<div class="runtime-card">' +
+        '<div class="runtime-card-header"><span class="runtime-card-name">' + escapeHtml(rt.name) + '</span><span class="runtime-status-dot ' + dotClass + '" title="' + escapeHtml(statusLabel) + '"></span></div>' +
+        '<span class="runtime-card-meta">' + escapeHtml(metaParts) + '</span>' +
+        errorHtml +
+        '</div>';
+    }).join('');
+  }
+
+  function renderLocalModels(models) {
+    var section = document.getElementById('local-models-section');
+    var tbody = document.getElementById('local-models-tbody');
+    var countEl = document.getElementById('local-models-count');
+    if (!section || !tbody) return;
+    if (!models || models.length === 0) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+    if (countEl) countEl.textContent = String(models.length);
+    tbody.innerHTML = models.map(function(m) {
+      var sizeText = m.size_gb != null ? m.size_gb + ' Go' : '—';
+      return '<tr>' +
+        '<td class="mono">' + escapeHtml(m.name) + '</td>' +
+        '<td>' + escapeHtml(m.runtime) + '</td>' +
+        '<td>' + escapeHtml(sizeText) + '</td>' +
+        '<td>' + escapeHtml(m.quantization || '—') + '</td>' +
+        '<td>' + escapeHtml(m.family || m.parameter_size || '—') + '</td>' +
+        '<td><div class="btn-action-group">' +
+          '<button type="button" class="btn-action" onclick="window._dfPullModel(\'' + escapeHtml(m.name) + '\')" title="Mettre à jour">🔄</button>' +
+          '<button type="button" class="btn-action btn-danger" onclick="window._dfDeleteModel(\'' + escapeHtml(m.name) + '\')" title="Supprimer">🗑️</button>' +
+        '</div></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  async function refreshLocalMatches() {
+    try {
+      var res = await fetch(API + '/runtimes/models');
+      if (!res.ok) return;
+      var data = await res.json();
+      localMatchedCache = data.matched || {};
+    } catch (_) {}
+  }
+
+  function isModelInstalledLocally(modelName) {
+    if (!modelName) return false;
+    if (localMatchedCache[modelName]) return true;
+    var lower = modelName.toLowerCase();
+    var short = lower.split('/').pop();
+    return localModelsCache.some(function(lm) {
+      var ln = lm.name.toLowerCase().split(':')[0];
+      return ln === short || lower.includes(ln) || ln.includes(short);
+    });
+  }
+
+  async function installModel(name) {
+    if (!name) return;
+    var progress = document.getElementById('install-progress');
+    var progressText = progress ? progress.querySelector('.install-progress-text') : null;
+    if (progress) progress.hidden = false;
+    if (progressText) progressText.textContent = (currentLang === 'en' ? 'Installing ' : 'Installation de ') + name + '…';
+    if (typeof showToast === 'function') showToast((currentLang === 'en' ? 'Installing ' : 'Installation de ') + name + '…', 'info');
+    try {
+      var res = await fetch(API + '/runtimes/install', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name}),
+      });
+      var data = await res.json();
+      if (data.ok) {
+        if (typeof showToast === 'function') showToast(data.message || (name + ' installé !'), 'success');
+        await loadRuntimes();
+      } else {
+        if (typeof showToast === 'function') showToast(data.message || 'Échec', 'error');
+      }
+    } catch (err) {
+      if (typeof showToast === 'function') showToast('Erreur : ' + (err.message || err), 'error');
+    } finally {
+      if (progress) progress.hidden = true;
+    }
+  }
+
+  async function deleteModel(name) {
+    if (!name) return;
+    var confirmMsg = currentLang === 'en'
+      ? 'Delete model "' + name + '" from Ollama?'
+      : 'Supprimer le modèle « ' + name + ' » d\'Ollama ?';
+    if (!confirm(confirmMsg)) return;
+    try {
+      var res = await fetch(API + '/runtimes/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name}),
+      });
+      var data = await res.json();
+      if (data.ok) {
+        if (typeof showToast === 'function') showToast(data.message || (name + ' supprimé.'), 'success');
+        await loadRuntimes();
+      } else {
+        if (typeof showToast === 'function') showToast(data.message || 'Échec', 'error');
+      }
+    } catch (err) {
+      if (typeof showToast === 'function') showToast('Erreur : ' + (err.message || err), 'error');
+    }
+  }
+
+  window._dfPullModel = function(n) { installModel(n); };
+  window._dfDeleteModel = function(n) { deleteModel(n); };
+
+  function initRuntimes() {
+    var btnRefresh = document.getElementById('btn-refresh-runtimes');
+    if (btnRefresh) btnRefresh.addEventListener('click', loadRuntimes);
+
+    var btnInstall = document.getElementById('btn-install-model');
+    var inputModel = document.getElementById('install-model-name');
+    if (btnInstall && inputModel) {
+      btnInstall.addEventListener('click', function() {
+        var name = inputModel.value.trim();
+        if (name) installModel(name);
+      });
+      inputModel.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          var name = inputModel.value.trim();
+          if (name) installModel(name);
+        }
+      });
+    }
+
+    document.querySelectorAll('.install-suggestion').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var model = btn.getAttribute('data-model');
+        if (inputModel) inputModel.value = model;
+        if (model) installModel(model);
+      });
+    });
+
+    loadRuntimes();
+  }
+
   function init() {
     renderUsageLegend();
     renderUsageFilterOptions();
@@ -1699,6 +1878,7 @@
     updateCustomProfileBadge();
 
     loadChangelog();
+    initRuntimes();
   }
 
   function renderSelectionState() {

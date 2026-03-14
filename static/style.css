@@ -1149,6 +1149,216 @@ body,
   font-size: 0.8rem;
 }
 
+/* Runtimes / IA locales */
+.runtimes-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.runtimes-header-row h2 { margin: 0; }
+.runtimes-help {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 1rem 0;
+}
+
+.runtimes-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.runtime-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  min-width: 200px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.runtime-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.runtime-card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.runtime-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.runtime-status-dot.running { background: var(--fit-parfait); box-shadow: 0 0 6px var(--fit-parfait); }
+.runtime-status-dot.installed { background: var(--fit-bon); }
+.runtime-status-dot.not-found { background: var(--border); }
+.runtime-card-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.runtime-card-error {
+  font-size: 0.78rem;
+  color: var(--fit-marginal);
+}
+
+.local-models-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.local-models-header h3 { margin: 0; font-size: 1rem; }
+.badge-count {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15em 0.5em;
+  border-radius: 10px;
+  min-width: 1.4em;
+  text-align: center;
+}
+
+.local-models-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+}
+.local-models-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.local-models-table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.local-models-table td {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.local-models-table .mono {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.btn-action-group {
+  display: flex;
+  gap: 0.35rem;
+}
+.btn-action {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-action:hover {
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.1);
+}
+.btn-action.btn-danger {
+  color: var(--fit-trop);
+}
+.btn-action.btn-danger:hover {
+  border-color: var(--fit-trop);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.install-model-section {
+  margin-top: 0.5rem;
+}
+.install-model-section h3 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem 0;
+}
+.install-model-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.install-model-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+.install-model-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.install-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.install-suggestions-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+
+.install-progress {
+  padding: 0.5rem 0;
+}
+.install-progress[hidden] { display: none; }
+.install-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: install-pulse 1.5s ease-in-out infinite;
+}
+@keyframes install-pulse {
+  0%, 100% { width: 30%; opacity: 0.7; }
+  50% { width: 80%; opacity: 1; }
+}
+.install-progress-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.installed-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--fit-parfait);
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
 /* Impression : masquer filtres et actions, garder config + tableau + comparaison */
 @media print {
   .header-row .lang-switcher,

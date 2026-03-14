@@ -162,3 +162,35 @@ class TestRefreshRateLimit:
         resp = client.post("/api/refresh")
         assert resp.status_code == 429
         main._refresh_last_by_ip.clear()
+
+
+class TestRuntimesEndpoints:
+    def test_runtimes_returns_list(self):
+        resp = client.get("/api/runtimes")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "runtimes" in data
+        assert isinstance(data["runtimes"], list)
+        assert len(data["runtimes"]) >= 3
+        assert "local_models" in data
+        assert "local_count" in data
+
+    def test_runtimes_models(self):
+        resp = client.get("/api/runtimes/models")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "models" in data
+        assert "matched" in data
+
+    def test_runtimes_running(self):
+        resp = client.get("/api/runtimes/running")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "models" in data
+
+    def test_install_requires_name(self):
+        resp = client.post(
+            "/api/runtimes/install",
+            json={"name": ""},
+        )
+        assert resp.status_code == 422
