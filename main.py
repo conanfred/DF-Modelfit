@@ -747,16 +747,31 @@ async def api_chat(request: Request):
         raise HTTPException(422, "Au moins un message est requis.")
 
     import asyncio
+    import queue
+    import threading
 
     async def generate():
+        q: queue.Queue = queue.Queue()
+
+        def _stream_worker():
+            try:
+                for chunk in ollama_chat_stream(
+                    model, messages, system_prompt, options,
+                ):
+                    q.put(chunk)
+            except Exception as exc:
+                q.put({"error": True, "message": {"content": ""}, "detail": str(exc)})
+            finally:
+                q.put(None)
+
+        thread = threading.Thread(target=_stream_worker, daemon=True)
+        thread.start()
+
         loop = asyncio.get_event_loop()
-        chunks = await loop.run_in_executor(
-            None,
-            lambda: list(ollama_chat_stream(
-                model, messages, system_prompt, options,
-            )),
-        )
-        for chunk in chunks:
+        while True:
+            chunk = await loop.run_in_executor(None, q.get)
+            if chunk is None:
+                break
             yield f"data: {json.dumps(chunk)}\n\n"
         yield "data: [DONE]\n\n"
 
