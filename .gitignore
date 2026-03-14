@@ -51,3 +51,6 @@ Thumbs.db
 *.log
 *.tmp
 .cache/
+
+# Exclu de GitHub
+opentimestamps/
