@@ -1,10 +1,8 @@
 """Tests pour les routes API de main.py (FastAPI TestClient)."""
-import json
-
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app, MODELS, load_models
+from main import app, load_models
 
 
 @pytest.fixture(autouse=True)

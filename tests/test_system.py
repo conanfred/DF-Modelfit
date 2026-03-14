@@ -1,6 +1,5 @@
 """Tests pour api/system.py — détection matérielle et cache."""
-import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from api.system import (
@@ -9,10 +8,7 @@ from api.system import (
     SystemSpecs,
     _cpu_name,
     _detect_nvidia,
-    _detect_apple_gpu,
     _is_arm,
-    _cache,
-    _CACHE_TTL_S,
 )
 
 

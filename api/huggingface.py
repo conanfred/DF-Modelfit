@@ -168,10 +168,11 @@ def fetch_model_list_from_api(
 
 
 def _smart_select(items: list[dict], n: int) -> list[str]:
-    """Environ 75% des meilleurs (likes+trending), 25% des plus récents. Si pas assez de récents, complète avec les meilleurs."""
+    """~75% meilleurs (likes+trending), ~25% récents. Complète si besoin."""
     if not items or n <= 0:
         return []
     n = min(n, len(items))
+
     def score_key(x: dict) -> int:
         return (x.get("likes") or 0) + (x.get("trendingScore") or 0)
 

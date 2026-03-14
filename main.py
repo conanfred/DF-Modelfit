@@ -428,8 +428,12 @@ def api_models(search: str | None = None, fit: str | None = None):
         except Exception:
             logger.debug("Skipping model %s: analysis failed", m.get("name", "?"), exc_info=True)
             continue
-        if search and search.lower() not in (m.get("name") or "").lower() and search.lower() not in (m.get("provider") or "").lower():
-            continue
+        if search:
+            q = search.lower()
+            name_lower = (m.get("name") or "").lower()
+            prov_lower = (m.get("provider") or "").lower()
+            if q not in name_lower and q not in prov_lower:
+                continue
         if fit and f.fit_level != fit:
             continue
         d["status"] = _model_status(m, last)
