@@ -10,7 +10,7 @@ Application web en français pour estimer quels modèles LLM sont adaptés à vo
 
 Sur GitHub, la vidéo ne s’affiche pas inline ; l’image ci‑dessous est cliquable et ouvre la vidéo.
 
-[![Voir la démo vidéo](assets/demo-poster.svg)](DEMO.mp4)
+[![Démo DF Modelfit](DEMO.gif)](DEMO.mp4)
 
 *(Cliquez sur l’image pour ouvrir [DEMO.mp4](DEMO.mp4))*
 
@@ -130,11 +130,11 @@ Personal LLM model recommendation tool. Web app to estimate which LLM models fit
 
 ## Demo
 
-On GitHub the video does not display inline; the image below is clickable and opens the video.
+The demo is shown directly below (GIF). Click to open the full video.
 
-[![Watch demo video](assets/demo-poster.svg)](DEMO.mp4)
+[![DF Modelfit demo](DEMO.gif)](DEMO.mp4)
 
-*(Click the image to open [DEMO.mp4](DEMO.mp4))*
+*Animated GIF — click to open video [DEMO.mp4](DEMO.mp4).*
 
 ## Features
 
