@@ -33,6 +33,8 @@ from api.chat import (
     ollama_chat_stream,
     ollama_is_available,
     ollama_list_chat_models,
+    get_model_defaults,
+    get_system_presets,
 )
 
 logging.basicConfig(
@@ -717,22 +719,28 @@ def api_runtimes_model_info(name: str):
 
 @app.get("/api/chat/models")
 def api_chat_models():
-    """Liste les modèles disponibles pour le chat."""
+    """Liste les modèles avec capacités et paramètres par défaut."""
     available = ollama_is_available()
     models = ollama_list_chat_models() if available else []
-    return {
-        "available": available,
-        "models": models,
-    }
+    for m in models:
+        m["defaults"] = get_model_defaults(m)
+    return {"available": available, "models": models}
+
+
+@app.get("/api/chat/presets")
+def api_chat_presets():
+    """Retourne les presets de system prompts."""
+    return {"presets": get_system_presets()}
 
 
 @app.post("/api/chat")
 async def api_chat(request: Request):
-    """Chat streaming avec un modèle Ollama (SSE)."""
+    """Chat streaming avec paramètres complets (SSE)."""
     body = await request.json()
     model = body.get("model", "").strip()
     messages = body.get("messages", [])
     system_prompt = body.get("system_prompt")
+    options = body.get("options")
     if not model:
         raise HTTPException(422, "Le nom du modèle est requis.")
     if not messages:
@@ -744,7 +752,9 @@ async def api_chat(request: Request):
         loop = asyncio.get_event_loop()
         chunks = await loop.run_in_executor(
             None,
-            lambda: list(ollama_chat_stream(model, messages, system_prompt)),
+            lambda: list(ollama_chat_stream(
+                model, messages, system_prompt, options,
+            )),
         )
         for chunk in chunks:
             yield f"data: {json.dumps(chunk)}\n\n"
