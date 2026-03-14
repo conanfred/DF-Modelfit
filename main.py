@@ -33,7 +33,6 @@ from api.chat import (
     ollama_chat_stream,
     ollama_is_available,
     ollama_list_chat_models,
-    build_screen_context_prompt,
 )
 
 logging.basicConfig(
