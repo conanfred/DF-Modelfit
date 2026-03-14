@@ -6,6 +6,12 @@ Application web en français pour estimer quels modèles LLM sont adaptés à vo
 - **Frontend** : HTML, CSS, JavaScript
 - **Données** : base de modèles au format JSON (ex. Hugging Face), logique de fit et de scoring calculée localement
 
+## Démo
+
+**[Voir la démo vidéo (DEMO.mp4)](DEMO.mp4)**
+
+<video src="DEMO.mp4" controls width="100%" style="max-width: 720px;"></video>
+
 ## Fonctionnalités
 
 - Détection matérielle (RAM, CPU, GPU, backend d’inférence probable).
@@ -119,6 +125,12 @@ Personal LLM model recommendation tool. Web app to estimate which LLM models fit
 - **Backend**: Python (FastAPI)
 - **Frontend**: HTML, CSS, JavaScript
 - **Data**: JSON model base (e.g. Hugging Face), fit and scoring logic computed locally
+
+## Demo
+
+**[Watch demo video (DEMO.mp4)](DEMO.mp4)**
+
+<video src="DEMO.mp4" controls width="100%" style="max-width: 720px;"></video>
 
 ## Features
 
